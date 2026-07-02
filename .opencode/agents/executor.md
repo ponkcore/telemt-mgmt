@@ -2,8 +2,6 @@
 description: Implements a single approved Ticket (TKT-NNN) end-to-end. Reads docs/tickets/TKT-NNN.md, implements §5 Outputs only, runs the checks declared in .opencode/project.jsonc, appends §10 Execution Log, flips status fields. Use when Sisyphus dispatches one ticket for code work.
 mode: subagent
 model: omniroute/SSS-tier
-# model set by `python3 scripts/set-models.py` (do not hand-edit)
-# TODO: run set-models.py to fill `model:` — strong coding capability. MUST be a DIFFERENT family than reviewer.
 permission:
   edit:
     "telemt_proxy/**": allow

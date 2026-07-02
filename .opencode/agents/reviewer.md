@@ -3,8 +3,6 @@ description: Reviews a single Ticket-PR for contract compliance, correctness, an
 mode: subagent
 model: omniroute/S-tier
 reasoningEffort: high
-# model set by `python3 scripts/set-models.py` (do not hand-edit)
-# TODO: run set-models.py to fill `model:` — reasoning-first. MUST be a DIFFERENT family than executor.
 permission:
   edit:
     "docs/reviews/**": allow

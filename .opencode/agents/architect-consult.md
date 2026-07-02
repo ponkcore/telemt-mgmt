@@ -3,8 +3,6 @@ description: In-flight architectural consultant for PRD execution. Sisyphus auto
 mode: subagent
 model: omniroute/SSS-tier
 reasoningEffort: high
-# model set by `python3 scripts/set-models.py` (do not hand-edit)
-# TODO: run set-models.py to fill `model:` — strong reasoning, same family as sisyphus for triangulation.
 permission:
   edit:
     "docs/architecture/**": allow

@@ -3,8 +3,6 @@ description: Audits one ArchSpec (+ its ADRs and Tickets) against its source PRD
 mode: subagent
 model: omniroute/SS-tier
 reasoningEffort: high
-# model set by `python3 scripts/set-models.py` (do not hand-edit)
-# TODO: run set-models.py to fill `model:` — reasoning-first. MUST be a DIFFERENT family than the Architect.
 permission:
   edit:
     "docs/reviews/**": allow
