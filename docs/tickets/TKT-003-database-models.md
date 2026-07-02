@@ -68,3 +68,4 @@ Implement SQLAlchemy 2.x async ORM models for `admin_users`, `proxy_users`, and 
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 opencode-executor: started
 - 2026-07-02 opencode-executor: in_review; tests 51 pass; lint clean; typecheck clean
+- 2026-07-02 executor: fix DATABASE_URL default + greenlet dev dep

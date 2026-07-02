@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 # SQLite (used for tests) does not support pool_size / max_overflow because
 # it uses StaticPool. For PostgreSQL (asyncpg) and other pooled dialects we
