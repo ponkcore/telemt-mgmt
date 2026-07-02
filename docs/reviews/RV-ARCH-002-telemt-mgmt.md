@@ -1,7 +1,7 @@
 ---
-id: RV-ARCH-001-v2
+id: RV-ARCH-002
 type: arch_review
-target_arch: ARCH-001@0.1.1
+target_arch: ARCH-001@0.1.2
 prd_ref: PRD-001@0.3.0
 status: done
 created: 2026-07-02
@@ -56,7 +56,7 @@ All 10 findings from RV-ARCH-001 are resolved in ARCH-001@0.1.1 / associated tic
 | **M1** QR code | resolved | TKT-001@0.1.1 §2 adds `qrcode[pil]` and `Pillow` to dependencies; TKT-004@0.1.1 §5 outputs `telemt_proxy/qr.py`, §6 AC10 requires QR PNG generation, and §3 no longer excludes QR; ARCH-001@0.1.1 §3 C1 explicitly describes QR generation. |
 | **M2** deploy paths | resolved | ARCH-001@0.1.1 §3 C5 now lists `infra/entry/deploy-entry.sh`, `infra/exit/deploy-exit.sh`, `infra/mgmt/deploy-mgmt.sh`, `infra/monitoring/deploy-monitoring.sh`, and `infra/landing/deploy-landing.sh`, matching the ticket outputs. |
 | **M3** common.sh | resolved | TKT-001@0.1.1 §5 owns `infra/lib/common.sh`; TKT-008@0.1.1 §5 no longer owns it; ADR-003@0.1.1 revision note states `common.sh` is created in TKT-001@0.1.1 to preserve Wave 2 parallelism. |
-| **M4** ADR-004 PATCH / If-Match | resolved | ADR-004@0.1.1 no longer mentions `If-Match` or `PATCH /v1/config`; revision note confirms removal per RV-ARCH-001; TKT-002@0.1.0 §3 explicitly excludes `PATCH /v1/config`. |
+| **M4** ADR-004@0.1.1 PATCH / If-Match | resolved | ADR-004@0.1.1 no longer mentions `If-Match` or `PATCH /v1/config`; revision note confirms removal per RV-ARCH-001; TKT-002@0.1.0 §3 explicitly excludes `PATCH /v1/config`. |
 | **M5** ad_tag config | resolved | TKT-008@0.1.1 §6 AC9 requires `ad_tag` in `config.toml`, AC10 requires `use_middle_proxy = true`, AC11 requires the @MTProxybot `/myproxies` post-deploy message; ARCH-001@0.1.1 §3 C5 deploy-exit description includes ad_tag generation and the promotion verification prompt. |
 | **M6** R18 extension point | resolved | TKT-004@0.1.1 §2 documents the `tier_service=None` parameter as the R18 extension point; §6 AC11 requires the parameter and its documentation. |
 | **M7** Grafana version | resolved | TKT-011@0.1.1 §7 specifies `grafana/grafana:12.4.2` and explicitly notes Grafana 12.4.2+ is required for dashboard #25119 compatibility. |

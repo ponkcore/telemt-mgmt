@@ -58,7 +58,9 @@
     "All HTTP clients (httpx) must have explicit timeouts — no infinite waits.",
     "Database access via SQLAlchemy ORM with parameterised queries only — no raw SQL strings.",
     "Bot package must be importable as a standalone pip package and as an aiogram Router include in any existing bot.",
-    "Deploy scripts must be idempotent and interactive — asking for domain, ad_tag, and secrets on first run."
+    "Deploy scripts must be idempotent and interactive — asking for domain, ad_tag, and secrets on first run, skipping prompts on re-run if config exists.",
+    "All Docker containers run with cap_drop: [ALL], read_only: true where possible, security_opt: [no-new-privileges:true]. Telemt adds cap_add: [NET_BIND_SERVICE].",
+    "All I/O operations (HTTP, database, file) must be async. No blocking calls in the event loop."
   ],
 
   "red_team_categories": [

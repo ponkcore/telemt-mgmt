@@ -1,11 +1,33 @@
 ---
 description: Audits one ArchSpec (+ its ADRs and Tickets) against its source PRD before approval. Checks PRD-goal coverage, Non-Goal compliance, ADR justification, internal consistency, version-pinned references, and ticket→component traceability + DAG validity. Writes a verdict to docs/reviews/RV-ARCH-NNN-*.md. Use via /arch-review or when autonomy.arch_approval delegates ArchSpec approval. Does NOT design, write code, or set status.
 mode: subagent
-model: omniroute/SS-tier
+model: omniroute/S-tier
 reasoningEffort: high
 permission:
   edit:
     "docs/reviews/**": allow
+    "*": deny
+  bash:
+    "rm -rf /*": deny
+    "rm -rf ~*": deny
+    "sudo *": deny
+    "git push --force *": deny
+    "git push -f *": deny
+    "git push origin main*": deny
+    "git push * main*": deny
+    "git config *": deny
+    "git *": allow
+    "ls *": allow
+    "find *": allow
+    "cat *": allow
+    "python3 *": allow
+    "sed *": allow
+    "mkdir *": allow
+    "mv *": allow
+    "head *": allow
+    "tail *": allow
+    "wc *": allow
+    "test *": allow
     "*": deny
 ---
 

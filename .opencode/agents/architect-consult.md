@@ -49,6 +49,18 @@ permission:
     "find *": allow
     "grep *": allow
     "rg *": allow
+    "cat *": allow
+    "python3 *": allow
+    "sed *": allow
+    "perl *": allow
+    "mkdir *": allow
+    "mv *": allow
+    "cp *": allow
+    "echo *": allow
+    "head *": allow
+    "tail *": allow
+    "wc *": allow
+    "test *": allow
     "*": deny
 ---
 

@@ -19,5 +19,8 @@ coverage/
 Thumbs.db
 *.swp
 
+# opencode runtime state — never committed
+.omo/
+
 # NOTE: .opencode/, opencode.json, project.jsonc and docs/ are COMMITTED on
 # purpose — they are the pipeline's shared memory (docs-as-code). Do not ignore them.
