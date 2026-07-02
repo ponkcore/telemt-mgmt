@@ -1,29 +1,85 @@
 {
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json"
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Project-scoped oh-my-openagent config (travels with the repo).
+  // Project-scoped oh-my-openagent config for telemt-mgmt.
   //
-  // MODELS FOR omo's BUILT-IN AGENTS & CATEGORIES ARE *NOT* SET HERE.
-  // By design they are inherited from your omo SYSTEM settings
-  // (~/.config/opencode/oh-my-openagent.json). This file deliberately leaves
-  // `agents` / `categories` unset so the system defaults win — change your omo
-  // system config to retune sisyphus / oracle / librarian / explore / the
-  // deep|quick|ultrabrain|... categories globally.
+  // omo built-in agents + categories are set HERE at project level so omo
+  // fully activates project-level mode and discovers .opencode/agents/mentor.md
+  // as a primary agent (Tab-cyclable alongside Sisyphus).
   //
-  // MODELS FOR OUR PIPELINE ROLES (mentor, executor, reviewer,
-  // architect-consult, architecture-reviewer) ARE NOT SET HERE EITHER.
-  // They live in `.opencode/agents/<role>.md` frontmatter and are written by
-  // the interactive helper:
-  //
-  //     python3 scripts/set-models.py
-  //
-  // Run it once per project (or whenever you re-tune). It asks for each role,
-  // enforces the hard rule executor-family ≠ reviewer-family (and warns when
-  // architect-consult / architecture-reviewer should differ), and writes the
-  // frontmatter for you — so you never hand-edit the YAML.
-  //
-  // Add project-scoped NON-model omo overrides below only if you really need
-  // them; otherwise keep this file as-is.
+  // Pipeline role models (mentor, executor, reviewer, architect-consult,
+  // architecture-reviewer) live in .opencode/agents/<role>.md frontmatter,
+  // written by `python3 scripts/set-models.py`.
   // ─────────────────────────────────────────────────────────────────────────
+
+  "agents": {
+    "sisyphus": {
+      "model": "omniroute/SSS-tier",
+      "reasoningEffort": "high"
+    },
+    "hephaestus": {
+      "model": "omniroute/SSS-tier"
+    },
+    "prometheus": {
+      "model": "omniroute/SS-tier",
+      "reasoningEffort": "high"
+    },
+    "atlas": {
+      "model": "omniroute/A-tier"
+    },
+    "oracle": {
+      "model": "omniroute/SS-tier",
+      "reasoningEffort": "high"
+    },
+    "librarian": {
+      "model": "omniroute/A-tier"
+    },
+    "explore": {
+      "model": "omniroute/A-tier"
+    },
+    "multimodal-looker": {
+      "model": "omniroute/SSS-tier"
+    },
+    "metis": {
+      "model": "omniroute/S-tier"
+    },
+    "momus": {
+      "model": "omniroute/SS-tier",
+      "reasoningEffort": "high"
+    },
+    "sisyphus-junior": {
+      "model": "omniroute/A-tier"
+    }
+  },
+
+  "categories": {
+    "visual-engineering": {
+      "model": "omniroute/SSS-tier"
+    },
+    "ultrabrain": {
+      "model": "omniroute/SS-tier",
+      "reasoningEffort": "high"
+    },
+    "deep": {
+      "model": "omniroute/SS-tier",
+      "reasoningEffort": "high"
+    },
+    "quick": {
+      "model": "omniroute/B-tier"
+    },
+    "unspecified-low": {
+      "model": "omniroute/A-tier"
+    },
+    "unspecified-high": {
+      "model": "omniroute/SSS-tier",
+      "reasoningEffort": "high"
+    },
+    "writing": {
+      "model": "omniroute/SSS-tier"
+    },
+    "artistry": {
+      "model": "omniroute/SSS-tier"
+    }
+  }
 }

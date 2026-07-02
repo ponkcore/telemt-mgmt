@@ -1,7 +1,7 @@
 ---
 id: PRD-001
 type: product_requirements
-status: draft
+status: approved
 version: 0.3.0
 owner: PO
 created: 2026-07-02
@@ -42,7 +42,7 @@ There is no existing management layer that: (a) embeds into the operator's multi
 - **G6** — The bot functionality can be added to any existing Telegram bot (operator's 5-6 stub bots, or Bedolaga bot) by installing a pip package and including an aiogram Router.
 - **G7** — All users see the operator's promoted Telegram channel via ad_tag (official MTProxy proxy-promotion mechanism).
 
-## §3 Non-Goals *(mandatory — at least one)*
+## §3 Non-Goals _(mandatory — at least one)_
 
 - Paid access, billing, subscriptions, or payment integration for the proxy service.
 - User tiers (privileged vs free) — deferred; code must have an extension point but no implementation in MVP.
@@ -69,6 +69,7 @@ There is no existing management layer that: (a) embeds into the operator's multi
 3. **Operator's existing bots** — the stub bots and (optionally) Bedolaga bot integrate the proxy package to offer "Get Proxy" alongside their existing functionality.
 
 **Core journeys:**
+
 - J1: End user obtains proxy link via bot button (most common).
 - J2: End user obtains proxy link via one-pager web page.
 - J3: Operator creates and tracks a labelled link for external distribution.
@@ -88,7 +89,7 @@ There is no existing management layer that: (a) embeds into the operator's multi
   - `deploy-exit.sh` — Telemt + Angie mask host on EU exit server. Prompts for: domain, ad_tag, tls_domain (operator chooses; recommendations: `github.com` for EU, `www.microsoft.com` backup), telemt secret, mask host config. Does NOT include monitoring.
   - `deploy-mgmt.sh` — Management bot + FastAPI + frontend + PostgreSQL on management server. Prompts for: telemt API URL + auth_header, bot token, database URL, panel domain.
   - `deploy-monitoring.sh` — Prometheus + Grafana on any server (not tied to exit). Prompts for: telemt metrics endpoint, Grafana admin password. Scrapes exit server :9090 over network.
-  All scripts are idempotent. (traces to G2)
+    All scripts are idempotent. (traces to G2)
 - **R8** — Docker Compose files for each component (entry, exit, mgmt, monitoring), each self-contained and independently deployable. (traces to G2)
 - **R9** — Migration script (`scripts/migrate.sh`) that: stops containers, tars config/state, transfers to new server, deploys, updates Cloudflare DNS A-record via API. Total downtime < 2 minutes. (traces to G4)
 - **R10** — Proxy links use a domain name pointing to the **entry server** (Russia), not the exit server. The `server=` field in `tg://proxy` links contains the entry server FQDN (e.g. `tg-proxy.example.com`), per telemt's `public_host` config. Cloudflare DNS-only (grey cloud), TTL=60s. Links contain domain, not IP. (traces to G4)
