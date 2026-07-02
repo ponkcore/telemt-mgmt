@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Angie configuration template for the telemt-mgmt one-pager landing page.
+#
+# Placeholders (replaced by deploy-landing.sh):
+#   __DOMAIN__      — domain name (e.g. proxy.example.com), or "_" for default
+#   __TLS_ENABLED__ — "yes" if TLS is configured, "no" otherwise
+#   __CERT_PATH__   — path to the TLS certificate file
+#   __KEY_PATH__    — path to the TLS private key file
+#
+# When TLS is disabled, only the port-80 server block is active.
+# When TLS is enabled, the port-80 server redirects to port 443.
+# ─────────────────────────────────────────────────────────────────────────────
+
+worker_processes auto;
+
+events {
+    worker_connections 256;
+}
+
+http {
+    include       /etc/angie/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile    on;
+    tcp_nopush  on;
+    keepalive_timeout 65;
+
+    server {
+        listen 80;
+        listen [::]:80;
+        server_name __DOMAIN__;
+
+        root /var/www/html;
+        index index.deployed.html;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }
+
+    # TLS server block — included only when __TLS_ENABLED__ is "yes"
+    #__TLS_BLOCK__
+}
