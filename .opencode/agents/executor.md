@@ -6,9 +6,13 @@ model: omniroute/SSS-tier
 # TODO: run set-models.py to fill `model:` — strong coding capability. MUST be a DIFFERENT family than reviewer.
 permission:
   edit:
-    "src/**": allow
+    "telemt_proxy/**": allow
+    "api/**": allow
+    "bot/**": allow
+    "frontend/src/**": allow
     "tests/**": allow
-    "packages/**": allow
+    "infra/**": allow
+    "scripts/**": allow
     "docs/tickets/**": allow
     "docs/questions/**": allow
     ".env*": deny

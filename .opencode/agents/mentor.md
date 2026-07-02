@@ -16,10 +16,13 @@ permission:
     "docs/drafts/**": allow
     ".gitignore": allow
     "src/**": deny
+    "telemt_proxy/**": deny
+    "api/**": deny
+    "bot/**": deny
+    "frontend/src/**": deny
     "tests/**": deny
-    "packages/**": deny
-    "migrations/**": deny
-    "config/**": deny
+    "infra/**": deny
+    "scripts/**": deny
     "docs/prd/**": deny
     "docs/architecture/**": deny
     "docs/tickets/**": deny
