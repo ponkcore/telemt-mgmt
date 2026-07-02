@@ -1,7 +1,7 @@
 ---
 id: TKT-013
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-008@0.1.1]
 estimate: M
@@ -72,3 +72,5 @@ Implement a migration script that moves a telemt exit server to a new server wit
 
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 architect: patched per RV-ARCH-001 finding L2 (post-migration user-reconnect verification AC added).
+- 2026-07-03 opencode-executor: started — implementing scripts/migrate.sh and scripts/cloudflare-dns.sh.
+- 2026-07-03 opencode-executor: in_review; tests 0 (bash scripts — no test framework); lint clean (shellcheck pass on both); typecheck N/A (bash).
