@@ -40,6 +40,7 @@ dev = [
     "mypy>=1.8",
     "ruff>=0.3",
     "respx>=0.21",
+    "aiosqlite>=0.22.1",
 ]
 
 # ── mypy: strict mode (project.jsonc commands.typecheck) ────────────────────
