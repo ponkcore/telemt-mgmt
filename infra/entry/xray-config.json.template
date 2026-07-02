@@ -1,0 +1,89 @@
+{
+  "log": {
+    "loglevel": "warning",
+    "access": "",
+    "error": "",
+    "dnsLog": false
+  },
+  "inbounds": [
+    {
+      "tag": "vless-reality-in",
+      "listen": "0.0.0.0",
+      "port": 443,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "level": 0,
+            "email": "telemt-entry@default"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "__REALITY_SNI__:443",
+          "xver": 0,
+          "serverNames": [
+            "__REALITY_SNI__"
+          ],
+          "privateKey": "__REALITY_PRIVATE_KEY__",
+          "minClientVer": "",
+          "maxClientVer": "",
+          "maxTimeDiff": 0,
+          "shortIds": [__REALITY_SHORT_IDS__],
+          "fingerprint": "firefox"
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy-to-exit",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "AsIs",
+        "redirect": "__EXIT_SERVER_IP__:8443",
+        "proxyProtocol": 2
+      }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIP"
+      }
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole",
+      "settings": {
+        "response": {
+          "type": "http"
+        }
+      }
+    }
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "outboundTag": "proxy-to-exit",
+        "network": "tcp,udp"
+      }
+    ]
+  }
+}
