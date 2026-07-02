@@ -2,7 +2,7 @@
 id: PRD-001
 type: product_requirements
 status: draft
-version: 0.2.0
+version: 0.3.0
 owner: PO
 created: 2026-07-02
 ---
@@ -83,13 +83,18 @@ There is no existing management layer that: (a) embeds into the operator's multi
 - **R4** — FastAPI backend (`api/`) providing admin endpoints: user list, create labelled link, disable user, aggregate stats, per-label stats. (traces to G3)
 - **R5** — React + TypeScript admin web panel (`frontend/`) reusing Remnawave's design system, consuming the FastAPI backend. (traces to G3)
 - **R6** — Labelled links are stored in PostgreSQL with: label name, telemt username, creation date, and are tracked via telemt per-user stats (connections, traffic, IPs). (traces to G3)
-- **R7** — Interactive deploy script (`scripts/deploy.sh`) that prompts for domain, ad_tag, telemt secret, Cloudflare API token, and generates config from templates. (traces to G2)
-- **R8** — Docker Compose for exit server (telemt + Angie mask host + Prometheus + Grafana) and entry server (Xray VLESS-Reality, fingerprint=firefox). (traces to G2)
+- **R7** — Interactive deploy scripts, each deployable on a fresh server independently:
+  - `deploy-entry.sh` — Xray VLESS-Reality on Russia entry server. Prompts for: exit server IP, Reality SNI (operator chooses; recommendations: `vkvideo.ru` for Russian domestic whitelisted, `yahoo.com` as telemt default), Reality keys, PROXYv2 settings.
+  - `deploy-exit.sh` — Telemt + Angie mask host on EU exit server. Prompts for: domain, ad_tag, tls_domain (operator chooses; recommendations: `github.com` for EU, `www.microsoft.com` backup), telemt secret, mask host config. Does NOT include monitoring.
+  - `deploy-mgmt.sh` — Management bot + FastAPI + frontend + PostgreSQL on management server. Prompts for: telemt API URL + auth_header, bot token, database URL, panel domain.
+  - `deploy-monitoring.sh` — Prometheus + Grafana on any server (not tied to exit). Prompts for: telemt metrics endpoint, Grafana admin password. Scrapes exit server :9090 over network.
+  All scripts are idempotent. (traces to G2)
+- **R8** — Docker Compose files for each component (entry, exit, mgmt, monitoring), each self-contained and independently deployable. (traces to G2)
 - **R9** — Migration script (`scripts/migrate.sh`) that: stops containers, tars config/state, transfers to new server, deploys, updates Cloudflare DNS A-record via API. Total downtime < 2 minutes. (traces to G4)
 - **R10** — Proxy links use a domain name pointing to the **entry server** (Russia), not the exit server. The `server=` field in `tg://proxy` links contains the entry server FQDN (e.g. `tg-proxy.example.com`), per telemt's `public_host` config. Cloudflare DNS-only (grey cloud), TTL=60s. Links contain domain, not IP. (traces to G4)
-- **R11** — Telemt config with FakeTLS enabled, `tls_domain = "github.com"` (Azure CDN, no Russian PoPs, TLS 1.3, recommended by telemt Issue #274), `unknown_sni_action = "reject_handshake"` (mimics real nginx, more DPI-resistant), `mask_host` pointing to local Angie, ad_tag set to operator's channel tag from @MTProxybot. (traces to G7)
-- **R12** — Xray entry server in Russia with VLESS-Reality inbound, Reality SNI = `yahoo.com` (official telemt XRAY_DOUBLE_HOP default; alternative: `vkvideo.ru` for Russian domestic whitelisted domain), PROXYv2 forwarding to exit server, `fingerprint = "firefox"`. (traces to G2)
-- **R13** — Grafana dashboard (importing #25119 or repo's grafana-dashboard-by-user.json) showing: active users, connections, traffic, bad connection ratio, per-user stats. (traces to G5)
+- **R11** — Telemt config with FakeTLS enabled, `tls_domain` chosen by operator at deploy time (recommendations: `github.com` for EU exit, `www.microsoft.com` as backup; do NOT use `petrovich.ru` or `cloudflare.com`), `unknown_sni_action = "reject_handshake"`, `mask_host` pointing to local Angie, ad_tag set to operator's channel tag from @MTProxybot. (traces to G7)
+- **R12** — Xray entry server in Russia with VLESS-Reality inbound, Reality SNI chosen by operator at deploy time (recommendations: `vkvideo.ru` for Russian domestic whitelisted domain, `yahoo.com` as telemt default), PROXYv2 forwarding to exit server, `fingerprint = "firefox"`. (traces to G2)
+- **R13** — Grafana dashboard (importing #25119 or repo's grafana-dashboard-by-user.json) deployed on a separate monitoring server, scraping telemt Prometheus endpoint on exit server. Shows: active users, connections, traffic, bad connection ratio, per-user stats. (traces to G5)
 - **R14** — Admin panel embeds or links to Grafana dashboard for unified monitoring view. (traces to G5)
 - **R15** — One-pager web page (served by Angie) with a single "Get Proxy" button that redirects to the standalone bot. (traces to G1)
 - **R16** — All user identifiers in telemt are `sha256(telegram_id + salt)[:16]` — never raw Telegram IDs. (security invariant)
@@ -115,7 +120,8 @@ There is no existing management layer that: (a) embeds into the operator's multi
 - **Bedolaga:** 184 releases, active development. We do NOT fork it. We use its Web API (X-API-Key) only if tier functionality is implemented later.
 - **Remnawave:** Cannot register telemt as a node (xray_version validation). Telemt monitoring is separate from Remnawave monitoring.
 - **Capacity:** ~160-200 concurrent users on 2vCPU/4GB with default ulimit. Requires `ulimit -n 65536` for ~6400-8000 users.
-- **Angie:** Used for mask_host (HTTP stub on :8080) and admin panel reverse proxy (auto-cert on :8443 → FastAPI :8000). Must NOT set `mask_port = 443` (breaks masking per telemt Issue #330).
+- **Angie:** Used for mask_host (HTTP stub on :8080) on exit server. Admin panel reverse proxy (auto-cert) on management server. Must NOT set `mask_port = 443` (breaks masking per telemt Issue #330).
+- **Monitoring:** Prometheus + Grafana on a separate server (not exit, not mgmt). Scrapes telemt :9090 on exit server over network. Keeps exit server lean and monitoring survives exit migration.
 - **tls_domain:** `github.com` for EU exit server (Azure CDN, no Russian PoPs, TLS 1.3, recommended by Issue #274). Backup: `www.microsoft.com`. Do NOT use `petrovich.ru` (telemt default — wrong for EU servers due to ASN mismatch). Do NOT use `cloudflare.com` (throttled in Russia). Do NOT use Apple domains (dedicated Apple ASN = detectable mismatch).
 - **Reality SNI:** `yahoo.com` (official telemt XRAY_DOUBLE_HOP default). Alternative for Russian entry: `vkvideo.ru` (domestic, whitelisted by TSPU, ASN-consistent for Russian server).
 - **TSPU detection context (July 2026):** Multi-signal system — SNI blocking, JA4/JA4+ fingerprinting (since June 5, 2026), ECH extension detection (since April 1, 2026), ASN/A-record validation (partially confirmed at MegaFon), post-handshake payload analysis (confirmed, silent drops at Application Data stage), connection frequency behavioral detection (>3 parallel TLS to same SNI in 350ms = 120s block). May 2026 testing: only 3/27 configs worked; federal operators (MTS, YOTA) showed 0% success; regional providers had partial success.
@@ -136,5 +142,6 @@ There is no existing management layer that: (a) embeds into the operator's multi
 
 ## §9 Revision Log
 
+- 2026-07-02 0.3.0 — split deploy into 4 independent scripts (entry, exit, mgmt, monitoring); removed hardcoded SNI/tls_domain — operator chooses at deploy time with recommendations; separated monitoring from exit server.
 - 2026-07-02 0.2.0 — updated with FakeTLS domain research findings: tls_domain=github.com, Reality SNI=yahoo.com, TSPU detection vectors, post-handshake analysis risk, ASN validation risk, link invalidation on tls_domain rotation.
 - 2026-07-02 0.1.0 — initial draft.
