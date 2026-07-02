@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# deploy-entry.sh — deploy the telemt-mgmt entry server (Xray VLESS-Reality).
+#
+# Installs Xray via Docker Compose on a Russia-based entry server.  Xray
+# terminates VLESS+Reality on port 443 and forwards all traffic to the EU exit
+# server (running telemt) using PROXYv2 so the real client IP is preserved.
+#
+# Prompts for (first run; reads .env on re-run — INV-IDEMPOTENT):
+#   EXIT_SERVER_IP       — IP/FQDN of the EU exit server
+#   REALITY_SNI          — SNI for Reality (recommend: vkvideo.ru / yahoo.com)
+#   REALITY_PRIVATE_KEY  — X25519 private key (auto-generate option)
+#   REALITY_SHORT_IDS    — Comma-separated short IDs (auto-generate option)
+#
+# Firewall: UFW allow 443/tcp only.
+# Docker hardening: cap_drop ALL, read_only, no-new-privileges (INV-DOCKER).
+#
+# Idempotent: re-running reads existing .env and skips prompts.
+# ─────────────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+# ── Timing wrapper (AC7) ────────────────────────────────────────────────────
+# Records the start time and prints total elapsed on exit (for M1 measurement).
+DEPLOY_START_TIME=$(date +%s)
+
+finish() {
+    local end_time elapsed
+    end_time=$(date +%s)
+    elapsed=$((end_time - DEPLOY_START_TIME))
+    local mins=$((elapsed / 60))
+    local secs=$((elapsed % 60))
+    echo ""
+    echo "━━━ Total elapsed time: ${mins}m ${secs}s ━━━"
+}
+trap finish EXIT
+
+# ── Resolve script directory ────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Source shared helpers
+# shellcheck disable=SC1091
+source "$INFRA_DIR/lib/common.sh"
+
+# ── Paths ───────────────────────────────────────────────────────────────────
+ENV_FILE="$SCRIPT_DIR/.env"
+XRAY_TEMPLATE="$SCRIPT_DIR/xray-config.json.template"
+XRAY_CONFIG="$SCRIPT_DIR/xray-config.json"
+
+# ── Pre-flight ──────────────────────────────────────────────────────────────
+check_docker
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  telemt-mgmt — Entry Server Deploy (Xray VLESS-Reality)      ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+
+# ── Load existing config (idempotent re-run detection) ──────────────────────
+# INV-IDEMPOTENT: if .env exists, values are loaded and prompt_for() skips prompts.
+load_env "$ENV_FILE"
+
+# ── Prompt for configuration (AC2) ──────────────────────────────────────────
+
+# EXIT_SERVER_IP — the EU exit server running telemt.
+EXIT_SERVER_IP="$(prompt_for "EXIT_SERVER_IP" "Enter exit server IP or FQDN")"
+save_env_var "$ENV_FILE" "EXIT_SERVER_IP" "$EXIT_SERVER_IP"
+
+# REALITY_SNI — recommended: vkvideo.ru (RU domestic), yahoo.com (telemt default).
+REALITY_SNI="$(prompt_for "REALITY_SNI" \
+    "Enter Reality SNI (recommend: vkvideo.ru for RU domestic, yahoo.com as default)" \
+    "yahoo.com")"
+save_env_var "$ENV_FILE" "REALITY_SNI" "$REALITY_SNI"
+
+# REALITY_PRIVATE_KEY — auto-generate using xray x25519 if not provided.
+# On re-run, prompt_for() returns the existing value from .env without prompting.
+if [[ -n "${REALITY_PRIVATE_KEY:-}" ]]; then
+    echo "✓ REALITY_PRIVATE_KEY already set (from .env)."
+else
+    echo ""
+    echo "Reality private key generation:"
+    echo "  The X25519 private key is used for Reality handshakes."
+    echo "  You can provide your own, or auto-generate using 'xray x25519'."
+    printf "Auto-generate Reality private key? [Y/n]: "
+    read -r auto_gen
+    auto_gen="${auto_gen:-Y}"
+    if [[ "${auto_gen,,}" == "y" ]]; then
+        echo "→ Generating X25519 keypair via xray x25519..."
+        # Try to use xray binary if available; otherwise use docker.
+        if command -v xray &>/dev/null; then
+            KEYPAIR=$(xray x25519)
+        else
+            echo "  xray binary not found locally, using Docker..."
+            KEYPAIR=$(docker run --rm ghcr.io/xtls/xray-core:latest xray x25519)
+        fi
+        # Output format: "Private key: <key>\nPublic key: <key>"
+        REALITY_PRIVATE_KEY=$(echo "$KEYPAIR" | grep -i "Private" | awk '{print $NF}')
+        REALITY_PUBLIC_KEY=$(echo "$KEYPAIR" | grep -i "Public" | awk '{print $NF}')
+        echo "✓ Generated private key: ${REALITY_PRIVATE_KEY:0:8}...(truncated)"
+        echo "  Public key (share with clients): $REALITY_PUBLIC_KEY"
+    else
+        printf "Enter Reality private key (X25519): "
+        read -r REALITY_PRIVATE_KEY
+        if [[ -z "$REALITY_PRIVATE_KEY" ]]; then
+            echo "ERROR: REALITY_PRIVATE_KEY is required." >&2
+            exit 1
+        fi
+    fi
+    export REALITY_PRIVATE_KEY
+fi
+save_env_var "$ENV_FILE" "REALITY_PRIVATE_KEY" "$REALITY_PRIVATE_KEY"
+
+# REALITY_SHORT_IDS — auto-generate if not provided.
+# Short IDs are hex strings (typically 8 hex chars each).
+if [[ -n "${REALITY_SHORT_IDS:-}" ]]; then
+    echo "✓ REALITY_SHORT_IDS already set (from .env)."
+else
+    echo ""
+    echo "Reality short IDs:"
+    echo "  Short IDs are hex strings used for client routing."
+    printf "Auto-generate Reality short IDs? [Y/n]: "
+    read -r auto_ids
+    auto_ids="${auto_ids:-Y}"
+    if [[ "${auto_ids,,}" == "y" ]]; then
+        echo "→ Generating short IDs..."
+        REALITY_SHORT_IDS=$(generate_secret 4)
+        # Add a second short ID (empty string "" is also valid in Xray)
+        local_second_id=$(generate_secret 4)
+        REALITY_SHORT_IDS="${REALITY_SHORT_IDS},${local_second_id}"
+        echo "✓ Generated short IDs: $REALITY_SHORT_IDS"
+    else
+        printf "Enter Reality short IDs (comma-separated hex, e.g. ab12cd34): "
+        read -r REALITY_SHORT_IDS
+        if [[ -z "$REALITY_SHORT_IDS" ]]; then
+            echo "ERROR: REALITY_SHORT_IDS is required." >&2
+            exit 1
+        fi
+    fi
+    export REALITY_SHORT_IDS
+fi
+save_env_var "$ENV_FILE" "REALITY_SHORT_IDS" "$REALITY_SHORT_IDS"
+
+echo ""
+echo "✓ Configuration saved to $ENV_FILE"
+
+# ── Generate Xray config from template ──────────────────────────────────────
+echo "→ Generating xray-config.json from template..."
+
+# Substitute placeholders in the template.
+# Use sed with a delimiter unlikely to appear in keys/IDs.
+sed \
+    -e "s|__EXIT_SERVER_IP__|${EXIT_SERVER_IP}|g" \
+    -e "s|__REALITY_SNI__|${REALITY_SNI}|g" \
+    -e "s|__REALITY_PRIVATE_KEY__|${REALITY_PRIVATE_KEY}|g" \
+    -e "s|__REALITY_SHORT_IDS__|${REALITY_SHORT_IDS}|g" \
+    "$XRAY_TEMPLATE" > "$XRAY_CONFIG"
+
+echo "✓ Generated $XRAY_CONFIG"
+
+# ── Firewall: UFW allow 443/tcp only ────────────────────────────────────────
+echo "→ Configuring firewall (UFW: allow 443/tcp)..."
+if command -v ufw &>/dev/null; then
+    # Allow SSH first to avoid lockout.
+    ufw allow ssh &>/dev/null || true
+    ufw allow 443/tcp &>/dev/null || true
+    # Enable UFW if not already active (non-interactive).
+    if ! ufw status | grep -q "Status: active"; then
+        echo "  Enabling UFW..."
+        ufw --force enable &>/dev/null
+    fi
+    echo "✓ UFW configured: 443/tcp allowed (SSH preserved)"
+else
+    echo "  ⚠ UFW not installed — skipping firewall configuration."
+    echo "  Manual: sudo ufw allow ssh && sudo ufw allow 443/tcp && sudo ufw enable"
+fi
+
+# ── Deploy with Docker Compose ──────────────────────────────────────────────
+echo "→ Starting Xray container via Docker Compose..."
+cd "$SCRIPT_DIR"
+
+if docker compose version &>/dev/null 2>&1; then
+    docker compose down 2>/dev/null || true
+    docker compose up -d
+else
+    docker-compose down 2>/dev/null || true
+    docker-compose up -d
+fi
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  ✓ Entry server deployed successfully!                        ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo "  Exit server:     $EXIT_SERVER_IP"
+echo "  Reality SNI:     $REALITY_SNI"
+echo "  Listening:       0.0.0.0:443 (VLESS+Reality)"
+echo "  PROXYv2:         enabled (real client IP → exit server)"
+echo "  Fingerprint:     firefox (NOT chrome — blocked since May 2026)"
+echo ""
+echo "  Re-run this script to update configuration."
+echo ""

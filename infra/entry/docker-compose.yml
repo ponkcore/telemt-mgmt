@@ -1,0 +1,39 @@
+# docker-compose.yml — Xray VLESS-Reality entry server.
+#
+# Xray terminates VLESS+Reality on port 443 and forwards to the EU exit server
+# using PROXYv2 (real client IP preservation).
+#
+# Docker hardening (INV-DOCKER):
+#   cap_drop: ALL, cap_add: NET_BIND_SERVICE (bind to port 443 < 1024)
+#   read_only: true (writable tmpfs for /tmp)
+#   security_opt: no-new-privileges:true
+#
+# Network mode: host — required so UFW firewall rules apply to Xray traffic
+# and so PROXYv2 source IP is preserved at the kernel level.
+---
+services:
+  xray:
+    image: ghcr.io/xtls/xray-core:latest
+    container_name: telemt-xray-entry
+    network_mode: host
+    restart: unless-stopped
+    # ── Docker hardening (INV-DOCKER, AC5) ──────────────────────────────
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    # ── Tmpfs for writable directories (read_only container) ───────────
+    tmpfs:
+      - /tmp:size=4M
+    # ── Config volume (read-only mount) ────────────────────────────────
+    volumes:
+      - ./xray-config.json:/etc/xray/config.json:ro
+    # ── Logging ────────────────────────────────────────────────────────
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
