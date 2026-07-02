@@ -1,7 +1,7 @@
 ---
 id: TKT-001
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: []
 estimate: M
@@ -83,3 +83,4 @@ Set up the monorepo structure, dependency management (pyproject.toml + uv, packa
 - 2026-07-02 architect: patched per RV-ARCH-001 findings M1 (qrcode deps un-deferred), M3 (common.sh added to outputs).
 - 2026-07-02 opencode-executor: started; implementing §5 Outputs.
 - 2026-07-02 opencode-executor: implemented §5 Outputs, all AC met, PR opened.
+- 2026-07-02 opencode-orchestrator: merged in 3bc609a; RV-CODE-001 verdict=pass_with_changes; BACKLOG-002 (README writezone), BACKLOG-003 (httpx[testing]→respx) created.
