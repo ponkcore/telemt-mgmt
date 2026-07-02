@@ -1,7 +1,7 @@
 ---
 id: TKT-003
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-001@0.1.1]
 estimate: M
@@ -69,3 +69,4 @@ Implement SQLAlchemy 2.x async ORM models for `admin_users`, `proxy_users`, and 
 - 2026-07-02 opencode-executor: started
 - 2026-07-02 opencode-executor: in_review; tests 51 pass; lint clean; typecheck clean
 - 2026-07-02 executor: fix DATABASE_URL default + greenlet dev dep
+- 2026-07-02 opencode-orchestrator: merged in 2315b9f; RV-CODE-003 verdict=pass; 0 findings.
