@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# angie.conf.template — Angie configuration for the exit server mask host.
+#
+# Serves the mask (stub) page on :8080 (NOT :443).
+# telemt handles :443 directly; Angie only serves the mask host for
+# non-TLS / direct HTTP requests that land on :8080.
+#
+# Per ARCH-001 §3 C5: "Angie serves mask_host on :8080 (NOT :443)".
+# ─────────────────────────────────────────────────────────────────────────────
+
+worker_processes auto;
+
+events {
+    worker_connections 256;
+}
+
+http {
+    include       /etc/angie/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile    on;
+    tcp_nopush  on;
+    keepalive_timeout 65;
+
+    # Mask host server — listens on :8080, serves the stub page.
+    # This is NOT :443 (telemt owns :443 for MTProto/FakeTLS).
+    server {
+        listen 8080;
+        listen [::]:8080;
+        server_name _;
+
+        root /var/www/mask;
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }
+}

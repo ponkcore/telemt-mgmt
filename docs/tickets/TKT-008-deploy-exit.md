@@ -1,7 +1,7 @@
 ---
 id: TKT-008
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-001@0.1.1]
 estimate: M
@@ -81,3 +81,5 @@ Create an interactive deploy script and Docker Compose for the EU exit server ru
 
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 architect: patched per RV-ARCH-001 findings M3 (common.sh moved to TKT-001@0.1.1), M5 (ad_tag config ACs added), L1 (timing wrapper AC added).
+- 2026-07-03 opencode-executor: started.
+- 2026-07-03 opencode-executor: in_review; all 12 AC met; shellcheck clean; validate_docs OK.
