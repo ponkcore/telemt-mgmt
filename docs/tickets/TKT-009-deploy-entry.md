@@ -70,3 +70,4 @@ Create an interactive deploy script and Docker Compose for the Russia entry serv
 - 2026-07-02 architect: patched per RV-ARCH-001 finding L1 (timing wrapper AC added).
 - 2026-07-03 opencode-executor: started; branch tkt/tkt-009-deploy-entry.
 - 2026-07-03 opencode-executor: in_review; shellcheck pass; validate_docs pass; all 7 AC met.
+- 2026-07-03 executor: fix F-M1 (shortIds JSON array format).

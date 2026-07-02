@@ -35,7 +35,7 @@
           "minClientVer": "",
           "maxClientVer": "",
           "maxTimeDiff": 0,
-          "shortIds": ["__REALITY_SHORT_IDS__"],
+          "shortIds": [__REALITY_SHORT_IDS__],
           "fingerprint": "firefox"
         }
       },

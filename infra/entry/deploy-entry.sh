@@ -146,13 +146,18 @@ echo "✓ Configuration saved to $ENV_FILE"
 # ── Generate Xray config from template ──────────────────────────────────────
 echo "→ Generating xray-config.json from template..."
 
+# Format REALITY_SHORT_IDS as a JSON array body: "id1", "id2"
+# The .env stores it as comma-separated hex; the template expects a bare
+# JSON array body (no brackets) so we wrap each value in double quotes.
+REALITY_SHORT_IDS_JSON=$(echo "$REALITY_SHORT_IDS" | sed 's/,/", "/g; s/^/"/; s/$/"/')
+
 # Substitute placeholders in the template.
 # Use sed with a delimiter unlikely to appear in keys/IDs.
 sed \
     -e "s|__EXIT_SERVER_IP__|${EXIT_SERVER_IP}|g" \
     -e "s|__REALITY_SNI__|${REALITY_SNI}|g" \
     -e "s|__REALITY_PRIVATE_KEY__|${REALITY_PRIVATE_KEY}|g" \
-    -e "s|__REALITY_SHORT_IDS__|${REALITY_SHORT_IDS}|g" \
+    -e "s|__REALITY_SHORT_IDS__|${REALITY_SHORT_IDS_JSON}|g" \
     "$XRAY_TEMPLATE" > "$XRAY_CONFIG"
 
 echo "✓ Generated $XRAY_CONFIG"
