@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — Angie serving the one-pager landing page.
+#
+# Per INV-DOCKER (project.jsonc invariants):
+#   cap_drop: [ALL], read_only: true where possible,
+#   security_opt: [no-new-privileges:true]
+#
+# The Angie container only needs to read static files and bind to port 80/443.
+# It does not need NET_BIND_SERVICE since we bind to host ports via Docker.
+# tmpfs is mounted for /tmp and /var/cache/angie (writable runtime dirs Angie
+# needs for temp files and cache) since the root filesystem is read-only.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  angie:
+    image: angie/angie:latest
+    container_name: telemt-landing
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./html:/var/www/html:ro
+      - ./angie.conf:/etc/angie/angie.conf:ro
+      - ./certs:/etc/angie/certs:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/angie
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    networks:
+      - landing
+
+networks:
+  landing:
+    driver: bridge
