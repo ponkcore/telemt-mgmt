@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — Prometheus + Grafana on the monitoring server.
+#
+# Per INV-DOCKER (project.jsonc invariants):
+#   cap_drop: [ALL], read_only: true where possible,
+#   security_opt: [no-new-privileges:true]
+#
+# Per ARCH-001 §3 C5 / TKT-011 §7 Constraints:
+#   - Prometheus image: prom/prometheus:v2.54.1
+#   - Grafana image: grafana/grafana:12.4.2 (dashboard #25119 compatibility)
+#   - Prometheus scrapes exit server :9090 (configurable via prometheus.yml)
+#   - Grafana auto-provisions datasource + dashboards on first start
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: telemt-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus:rw
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--alertmanager.url=http://localhost:9093"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:12.4.2
+    container_name: telemt-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana:rw
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3000
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  monitoring:
+    driver: bridge

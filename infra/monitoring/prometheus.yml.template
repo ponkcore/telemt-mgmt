@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# prometheus.yml.template — Prometheus scrape configuration.
+#
+# The placeholder __TELEMT_METRICS_ENDPOINT__ is replaced by deploy-monitoring.sh
+# with the exit server's metrics endpoint (IP:9090) entered by the operator.
+#
+# Per ARCH-001 §3 C5: Prometheus scrapes the exit server's telemt :9090 metrics.
+# Per TKT-011 AC2: the endpoint is configurable via the deploy script prompt.
+# ─────────────────────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Alert rules loaded from the file mounted in docker-compose.yml.
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
+# Scrape the exit server's telemt Prometheus metrics.
+scrape_configs:
+  - job_name: "telemt"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "__TELEMT_METRICS_ENDPOINT__"
+
+  # Self-monitoring — Prometheus scraping itself.
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"
