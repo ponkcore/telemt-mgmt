@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# config.toml.template — telemt configuration for the exit server.
+#
+# Placeholders (replaced by deploy-exit.sh):
+#   __AD_TAG__        — Telegram ad_tag (32-char hex from @MTProxybot)
+#   __TELEMT_SECRET__  — default user secret (auto-generated if empty)
+#   __TLS_DOMAIN__     — FakeTLS camouflage domain (github.com recommended)
+#   __AUTH_HEADER__    — API auth header (auto-generated if empty)
+#   __MANAGEMENT_IPS__ — comma-separated CIDR list for API whitelist
+#
+# Per ARCH-001 §5 invariants:
+#   INV-DOCKER  — hardened container (cap_drop ALL, read_only, no-new-privileges)
+#   INV-SECRETS — all secrets via env vars, .env.example documents names
+# ─────────────────────────────────────────────────────────────────────────────
+
+[general]
+# use_middle_proxy must be true for ad_tag to function (AC10).
+use_middle_proxy = true
+# ad_tag obtained from @MTProxybot — required for channel promotion (AC9).
+ad_tag = "__AD_TAG__"
+# config_strict rejects unknown config keys (security hardening).
+config_strict = true
+quota_state_path = "/var/lib/telemt/quota-state.json"
+
+[general.modes]
+# TLS mode (FakeTLS) — essential for DPI evasion in Russia.
+tls = true
+
+[server]
+port = 443
+# Prometheus metrics — bound to localhost, accessible via UFW-restricted port.
+metrics_port = 9090
+metrics_listen = "0.0.0.0:9090"
+
+[server.api]
+enabled = true
+listen = "0.0.0.0:9091"
+# Whitelist: management server IPs that may access the API.
+whitelist = [__MANAGEMENT_IPS__]
+auth_header = "__AUTH_HEADER__"
+
+[censorship]
+# FakeTLS domain — the SNI presented to DPI inspection.
+tls_domain = "__TLS_DOMAIN__"
+# mask = true: non-TLS requests are redirected to the mask host (Angie :8080).
+mask = true
+# unknown_sni_action: reject connections with unrecognised SNI (hardening).
+unknown_sni_action = "reject_handshake"
+
+[access.user_max_tcp_conns]
+default_user = 20
+
+[access.user_max_unique_ips]
+default_user = 3
+
+[access.user_data_quota_bytes]
+free_user = 1073741824
