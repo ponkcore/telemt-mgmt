@@ -1,7 +1,7 @@
 ---
 id: TKT-002
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-001@0.1.1]
 estimate: M
@@ -71,3 +71,4 @@ Implement `TelemtClient` â€” a typed async httpx wrapper for telemt's REST API â
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 opencode-executor: started TKT-002 implementation.
 - 2026-07-02 opencode-executor: in_review; tests 30 pass; lint clean; typecheck clean; client.py coverage 100%.
+- 2026-07-02 opencode-orchestrator: merged in 554487e; RV-CODE-002 verdict=pass; 0 Highs, 0 Mediums, 2 Lows.
