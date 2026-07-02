@@ -2,7 +2,7 @@
 id: PRD-001
 type: product_requirements
 status: draft
-version: 0.1.0
+version: 0.2.0
 owner: PO
 created: 2026-07-02
 ---
@@ -86,9 +86,9 @@ There is no existing management layer that: (a) embeds into the operator's multi
 - **R7** — Interactive deploy script (`scripts/deploy.sh`) that prompts for domain, ad_tag, telemt secret, Cloudflare API token, and generates config from templates. (traces to G2)
 - **R8** — Docker Compose for exit server (telemt + Angie mask host + Prometheus + Grafana) and entry server (Xray VLESS-Reality, fingerprint=firefox). (traces to G2)
 - **R9** — Migration script (`scripts/migrate.sh`) that: stops containers, tars config/state, transfers to new server, deploys, updates Cloudflare DNS A-record via API. Total downtime < 2 minutes. (traces to G4)
-- **R10** — Proxy links use a domain name (e.g. `tg-proxy.example.com`) with Cloudflare DNS-only (grey cloud), TTL=60s. Links contain domain, not IP. (traces to G4)
-- **R11** — Telemt config with FakeTLS enabled, mask_host pointing to local Angie, ad_tag set to operator's channel tag from @MTProxybot. (traces to G7)
-- **R12** — Xray entry server in Russia with VLESS-Reality inbound, PROXYv2 forwarding to exit server, fingerprint=firefox. (traces to G2)
+- **R10** — Proxy links use a domain name pointing to the **entry server** (Russia), not the exit server. The `server=` field in `tg://proxy` links contains the entry server FQDN (e.g. `tg-proxy.example.com`), per telemt's `public_host` config. Cloudflare DNS-only (grey cloud), TTL=60s. Links contain domain, not IP. (traces to G4)
+- **R11** — Telemt config with FakeTLS enabled, `tls_domain = "github.com"` (Azure CDN, no Russian PoPs, TLS 1.3, recommended by telemt Issue #274), `unknown_sni_action = "reject_handshake"` (mimics real nginx, more DPI-resistant), `mask_host` pointing to local Angie, ad_tag set to operator's channel tag from @MTProxybot. (traces to G7)
+- **R12** — Xray entry server in Russia with VLESS-Reality inbound, Reality SNI = `yahoo.com` (official telemt XRAY_DOUBLE_HOP default; alternative: `vkvideo.ru` for Russian domestic whitelisted domain), PROXYv2 forwarding to exit server, `fingerprint = "firefox"`. (traces to G2)
 - **R13** — Grafana dashboard (importing #25119 or repo's grafana-dashboard-by-user.json) showing: active users, connections, traffic, bad connection ratio, per-user stats. (traces to G5)
 - **R14** — Admin panel embeds or links to Grafana dashboard for unified monitoring view. (traces to G5)
 - **R15** — One-pager web page (served by Angie) with a single "Get Proxy" button that redirects to the standalone bot. (traces to G1)
@@ -108,25 +108,33 @@ There is no existing management layer that: (a) embeds into the operator's multi
 ## §7 Constraints & Assumptions
 
 - **Hosting:** Hetzner CX22 (2vCPU/4GB, ~€4.5/mo) for exit server; cheap RU VPS (1vCPU/1GB) for entry server. Operator has existing servers available.
-- **DNS:** Cloudflare DNS-only (grey cloud, no proxy). Operator has domains on Cloudflare.
+- **DNS:** Cloudflare DNS-only (grey cloud, no proxy). Operator has domains on Cloudflare. Cloudflare proxy (orange cloud) is throttled in Russia since June 2025 — must use DNS-only.
 - **Telegram channel:** Must be public for @MTProxybot registration.
-- **JA4 blocking:** Standard Telegram clients may still be blocked; the proxy + double-hop addresses server-side evasion, but client-side JA4 is out of scope (deferred to tdlib-obf or local DPI tools).
+- **JA4 blocking:** Standard Telegram clients may still be blocked (JA4 fingerprint `t13d1516h2_8daaf6152771_d8a2da3f94cd` confirmed blocked in tdesktop #30733); the proxy + double-hop addresses server-side evasion, but client-side JA4 is out of scope (deferred to tdlib-obf or local DPI tools: GoodbyeDPI, zapret, ByeDPI).
 - **Telemt version:** 3.4.22 (latest as of July 2026). License: TELEMT LICENSE 3.3 (not MIT — trademark protected, patent grant with defensive termination).
 - **Bedolaga:** 184 releases, active development. We do NOT fork it. We use its Web API (X-API-Key) only if tier functionality is implemented later.
 - **Remnawave:** Cannot register telemt as a node (xray_version validation). Telemt monitoring is separate from Remnawave monitoring.
 - **Capacity:** ~160-200 concurrent users on 2vCPU/4GB with default ulimit. Requires `ulimit -n 65536` for ~6400-8000 users.
-- **Angie:** Used for mask_host (HTTP stub on :8080) and admin panel reverse proxy (auto-cert on :8443 → FastAPI :8000).
+- **Angie:** Used for mask_host (HTTP stub on :8080) and admin panel reverse proxy (auto-cert on :8443 → FastAPI :8000). Must NOT set `mask_port = 443` (breaks masking per telemt Issue #330).
+- **tls_domain:** `github.com` for EU exit server (Azure CDN, no Russian PoPs, TLS 1.3, recommended by Issue #274). Backup: `www.microsoft.com`. Do NOT use `petrovich.ru` (telemt default — wrong for EU servers due to ASN mismatch). Do NOT use `cloudflare.com` (throttled in Russia). Do NOT use Apple domains (dedicated Apple ASN = detectable mismatch).
+- **Reality SNI:** `yahoo.com` (official telemt XRAY_DOUBLE_HOP default). Alternative for Russian entry: `vkvideo.ru` (domestic, whitelisted by TSPU, ASN-consistent for Russian server).
+- **TSPU detection context (July 2026):** Multi-signal system — SNI blocking, JA4/JA4+ fingerprinting (since June 5, 2026), ECH extension detection (since April 1, 2026), ASN/A-record validation (partially confirmed at MegaFon), post-handshake payload analysis (confirmed, silent drops at Application Data stage), connection frequency behavioral detection (>3 parallel TLS to same SNI in 350ms = 120s block). May 2026 testing: only 3/27 configs worked; federal operators (MTS, YOTA) showed 0% success; regional providers had partial success.
+- **tls_domain rotation constraint:** Changing `tls_domain` invalidates ALL existing proxy links (domain is embedded in the `ee` secret). This is a fundamental operational constraint — rotation is event-driven (not scheduled) and requires redistributing links to all users.
 
 ## §8 Risks
 
-- **R-1 JA4 client blocking persists** → proxy works but users with standard clients can't connect. Mitigation: document GoodbyeDPI/zapret/ByeDPI as client-side workarounds; plan tdlib-obf for phase 2.
-- **R-2 Entry server IP blocked by RKN** → users can't reach the tunnel. Mitigation: deploy backup entry server; migrate.sh can repoint DNS to new entry.
-- **R-3 tls_domain detected by TSPU** → FakeTLS fingerprint blocked. Mitigation: rotate tls_domain (one-line config change + restart); research ongoing for optimal domain selection.
+- **R-1 JA4 client blocking persists** → JA4 fingerprint `t13d1516h2_8daaf6152771_d8a2da3f94cd` confirmed blocked (tdesktop #30733). Updated clients have fixes but old-client users remain blocked. Mitigation: document GoodbyeDPI/zapret/ByeDPI as client-side workarounds; plan tdlib-obf for phase 2.
+- **R-2 Entry server IP blocked by RKN** → users can't reach the tunnel. Mitigation: deploy backup entry server; migrate.sh can repoint DNS to new entry. For Russian entry, consider `vkvideo.ru` as Reality SNI (domestic, whitelisted).
+- **R-3 tls_domain detected by TSPU** → FakeTLS fingerprint blocked. Mitigation: rotate tls_domain (backup: `www.microsoft.com`, `www.twitch.tv`, `wikipedia.org`). NOTE: rotation invalidates all existing links (domain embedded in ee secret) — must redistribute. Use event-driven rotation, not scheduled.
 - **R-4 ad_tag revoked by @MTProxybot** → channel promotion stops. Mitigation: maintain backup channel; re-register with @MTProxybot.
 - **R-5 Bedolaga API breaking change** → if tier functionality is added later, the Bedolaga Web API endpoint may change. Mitigation: pin API version; add integration test.
 - **R-6 Telegram DNS caching on Desktop** → after migration, Desktop users may need to restart Telegram (Issue #30494). Mitigation: document in FAQ; links still "work" after restart.
 - **R-7 Telemt license change** → TELEMT LICENSE 3.3 may change terms. Mitigation: pin telemt version; monitor releases.
+- **R-8 Post-handshake payload analysis by TSPU** → TSPU allows TLS handshake to complete, then silently drops packets when MTProto Application Data begins (confirmed in mtg #547). Mitigation: double-hop architecture partially mitigates — TSPU sees encrypted Xray/Reality tunnel, not raw MTProto. However, federal operators (MTS, YOTA) showed 0% success rate in May 2026 testing. This is the hardest vector to counter server-side.
+- **R-9 Connection frequency behavioral detection** → TSPU blocks for 120s when >3 parallel TLS connections to same SNI occur within 350-400ms (Telegram's DC connection burst pattern). Mitigation: double-hop entry server handles connection multiplexing; Xray Reality tunnel aggregates connections.
+- **R-10 ASN/A-record validation by TSPU** → TSPU may validate that SNI domain's A-record resolves to proxy server IP (partially confirmed at MegaFon). Mitigation: for exit server, TSPU cannot see it (double-hop). For entry server, use Reality SNI whose domain's ASN is plausible for the server's location (Russian domain for Russian entry server).
 
 ## §9 Revision Log
 
+- 2026-07-02 0.2.0 — updated with FakeTLS domain research findings: tls_domain=github.com, Reality SNI=yahoo.com, TSPU detection vectors, post-handshake analysis risk, ASN validation risk, link invalidation on tls_domain rotation.
 - 2026-07-02 0.1.0 — initial draft.
