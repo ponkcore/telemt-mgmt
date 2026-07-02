@@ -1,0 +1,99 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────
+  // project.jsonc — THE single source of truth for everything project-specific.
+  //
+  // This is the ONE file you edit when you copy the template into a new project.
+  // The pipeline (executor / reviewer / tkt-cycle / prd-orchestration) reads its
+  // build/test commands, conventions, and invariants FROM HERE instead of
+  // hardcoding any language or tool. Change the stack -> change only this file.
+  //
+  // It is COMMITTED to git (goes to GitHub). It is read by agents AND by CI.
+  // It is NOT gitignored. Secrets never live here — only env var *names*.
+  //
+  // The example below is filled for a TypeScript/Node project. Replace every
+  // value with your project's. Nothing else in the template hardcodes a stack.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "project": {
+    "name": "my-project",
+    "slug": "my-project",
+    "one_liner": "One sentence: what this project is and who it serves."
+  },
+
+  "stack": {
+    // Free-form descriptors. Agents read these to match style and idioms.
+    "language": "TypeScript",
+    "runtime": "Node 24",
+    "package_manager": "npm",
+    "test_framework": "vitest"
+  },
+
+  "commands": {
+    // The pipeline runs EXACTLY these strings. Leave a value as "" (empty) to
+    // tell the pipeline that step does not exist for this project (it is skipped).
+    "install": "npm ci",
+    "typecheck": "npm run typecheck",
+    "lint": "npm run lint",
+    "test": "npm test",
+    "coverage": "npm run coverage",
+    "build": "npm run build"
+  },
+
+  "conventions": {
+    "source_dir": "src",
+    "test_dir": "tests",
+    // Glob describing where tests live, for the executor to mirror source.
+    "test_glob": "tests/**/*.test.ts",
+    // Directories the executor is allowed to write code into. These must match
+    // the `edit: allow` zones in opencode.json and the executor agent.
+    "code_write_zones": ["src/**", "tests/**", "packages/**"],
+    // Minimum coverage for new code when a ticket asks for coverage (0 = off).
+    "min_new_code_coverage": 80
+  },
+
+  // Project-specific HARD rules the executor must obey and the reviewer must
+  // check. These replace the old hardcoded "all SQL parameterised / tenant
+  // isolation" rules. Write yours here; leave [] if none yet.
+  "invariants": [
+    "Example: all SQL is parameterised; no string-concatenated queries.",
+    "Example: all external user text reaching an LLM passes the sanitiser in src/security/.",
+    "Example: every data access is scoped per-tenant per ADR-001."
+  ],
+
+  // Red-team probe categories the reviewer must consider for every PR. These
+  // are GENERIC and stack-agnostic. The reviewer marks each applicable/N-A and
+  // pulls concrete specifics from the ArchSpec + this file's invariants.
+  "red_team_categories": [
+    "error_paths",
+    "concurrency",
+    "input_validation",
+    "prompt_injection",
+    "authz_isolation",
+    "secrets",
+    "observability",
+    "rollback"
+  ],
+
+  "orchestration": {
+    // "auto" = parallelise independent tickets up to concurrency_cap.
+    // "sequential" = one ticket at a time (old default).
+    "parallelism": "auto",
+    "concurrency_cap": 3
+  },
+
+  // How much the pipeline may approve on its own. Dial up as trust grows.
+  "autonomy": {
+    // PRD = business judgement. Keep "manual" — only the PO approves.
+    "prd_approval": "manual",
+    // ArchSpec = technical correctness. "auto-on-reviewer-pass" lets the
+    // architecture-reviewer agent (different model family from the Architect)
+    // gate it; PO just gets a 1-line notice. "manual" = PO approves by hand.
+    "arch_approval": "manual",
+    // Ticket PRs already merge on reviewer pass + green CI. "auto-on-reviewer-pass"
+    // keeps that; "manual" forces a PO ack before each merge.
+    "merge": "auto-on-reviewer-pass",
+    // Escalate to the PO whenever a decision has business / cost / regulatory /
+    // irreversible consequences, regardless of the settings above.
+    "always_escalate_on": ["business_impact", "cost", "regulatory", "irreversible"]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json"
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Project-scoped oh-my-openagent config (travels with the repo).
+  //
+  // MODELS FOR omo's BUILT-IN AGENTS & CATEGORIES ARE *NOT* SET HERE.
+  // By design they are inherited from your omo SYSTEM settings
+  // (~/.config/opencode/oh-my-openagent.json). This file deliberately leaves
+  // `agents` / `categories` unset so the system defaults win — change your omo
+  // system config to retune sisyphus / oracle / librarian / explore / the
+  // deep|quick|ultrabrain|... categories globally.
+  //
+  // MODELS FOR OUR PIPELINE ROLES (mentor, executor, reviewer,
+  // architect-consult, architecture-reviewer) ARE NOT SET HERE EITHER.
+  // They live in `.opencode/agents/<role>.md` frontmatter and are written by
+  // the interactive helper:
+  //
+  //     python3 scripts/set-models.py
+  //
+  // Run it once per project (or whenever you re-tune). It asks for each role,
+  // enforces the hard rule executor-family ≠ reviewer-family (and warns when
+  // architect-consult / architecture-reviewer should differ), and writes the
+  // frontmatter for you — so you never hand-edit the YAML.
+  //
+  // Add project-scoped NON-model omo overrides below only if you really need
+  // them; otherwise keep this file as-is.
+  // ─────────────────────────────────────────────────────────────────────────
+}

@@ -1,0 +1,29 @@
+name: docs-ci
+
+# Validates the docs-as-code layer (frontmatter, version-pinned refs, ticket DAG).
+# Stack-agnostic: it runs the universal scripts/validate_docs.py and needs nothing
+# but Python. Code typecheck/lint/tests are run locally by the executor per
+# .opencode/project.jsonc — they are not part of this workflow.
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "scripts/validate_docs.py"
+      - ".github/workflows/docs-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "scripts/validate_docs.py"
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate docs
+        run: python3 scripts/validate_docs.py
