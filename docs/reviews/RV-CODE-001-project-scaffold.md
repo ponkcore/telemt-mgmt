@@ -32,7 +32,7 @@ created: 2026-07-02
 | AC3 | `uv run mypy --strict telemt_proxy api bot` passes | `Success: no issues found in 3 source files` | ✅ |
 | AC4 | `uv run ruff check telemt_proxy api bot tests` passes | `All checks passed!` | ✅ |
 | AC5 | `uv run pytest -q` passes (0 tests OK) | `no tests ran in 0.00s` | ✅ |
-| AC6 | `.env.example` contains all 11 env vars from ARCH-001 §9 | Verified all 11 secrets present (`TELEMT_AUTH_HEADER`, `BOT_TOKEN`, `DATABASE_URL`, `HASHING_SALT`, `JWT_SECRET_KEY`, `ADMIN_API_KEY`, `TELEMT_SECRET`, `AD_TAG`, `REALITY_PRIVATE_KEY`, `CLOUDFLARE_API_TOKEN`, `GRAFANA_ADMIN_PASSWORD`) | ✅ |
+| AC6 | `.env.example` contains all 11 env vars from ARCH-001@0.1.2 §9 | Verified all 11 secrets present (`TELEMT_AUTH_HEADER`, `BOT_TOKEN`, `DATABASE_URL`, `HASHING_SALT`, `JWT_SECRET_KEY`, `ADMIN_API_KEY`, `TELEMT_SECRET`, `AD_TAG`, `REALITY_PRIVATE_KEY`, `CLOUDFLARE_API_TOKEN`, `GRAFANA_ADMIN_PASSWORD`) | ✅ |
 | AC7 | `telemt_proxy/py.typed` exists | File exists as empty marker | ✅ |
 
 ## Additional `project.jsonc` checks
@@ -54,8 +54,8 @@ created: 2026-07-02
 
 ### Low (optional)
 - **F-L1:** `frontend/.eslintrc.cjs` and `frontend/eslint.config.js` both exist. The legacy `.eslintrc.cjs` is inert under ESLint 9 and only kept because it is listed in §5 Outputs. Consider removing it in a follow-up to avoid confusion, or document why both configs are present.
-- **F-L2:** `npm ci` reports 2 audit vulnerabilities (1 moderate, 1 high) in transitive frontend dependencies. Not blocking for a scaffold, but should be re-evaluated when real frontend code lands in TKT-007.
-- **F-L3:** `frontend/vite.config.ts` proxies `/api` to `http://localhost:8000`. This is acceptable scaffold defaults, but the proxy target is hardcoded; future tickets (TKT-005/TKT-010) should make it environment-driven before production deploy.
+- **F-L2:** `npm ci` reports 2 audit vulnerabilities (1 moderate, 1 high) in transitive frontend dependencies. Not blocking for a scaffold, but should be re-evaluated when real frontend code lands in TKT-007@0.1.1.
+- **F-L3:** `frontend/vite.config.ts` proxies `/api` to `http://localhost:8000`. This is acceptable scaffold defaults, but the proxy target is hardcoded; future tickets (TKT-005@0.1.0/TKT-010@0.1.0) should make it environment-driven before production deploy.
 
 ## Red-team probes
 
