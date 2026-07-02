@@ -1,7 +1,7 @@
 ---
 id: TKT-009
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-001@0.1.1]
 estimate: M
@@ -71,3 +71,4 @@ Create an interactive deploy script and Docker Compose for the Russia entry serv
 - 2026-07-03 opencode-executor: started; branch tkt/tkt-009-deploy-entry.
 - 2026-07-03 opencode-executor: in_review; shellcheck pass; validate_docs pass; all 7 AC met.
 - 2026-07-03 executor: fix F-M1 (shortIds JSON array format).
+- 2026-07-03 opencode-orchestrator: merged in a7deeb9; RV-CODE-009 verdict=pass_with_changes (iter 2); F-M2 backlogged, F-L1/L2 non-blocking.
