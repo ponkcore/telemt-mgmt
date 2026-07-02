@@ -1,7 +1,7 @@
 ---
 id: TKT-012
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-001@0.1.1]
 estimate: S
@@ -67,3 +67,4 @@ Create a static one-pager landing page with a "Получить прокси" bu
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 opencode-executor: in_review; tests N/A (no code tests for static infra); shellcheck pass; validate_docs.py pass.
 - 2026-07-02 executor: fix F-H1 (optional DOMAIN handling).
+- 2026-07-02 opencode-orchestrator: merged in 277b937; RV-CODE-012 verdict=pass (iter 2); 3 Lows non-blocking.
