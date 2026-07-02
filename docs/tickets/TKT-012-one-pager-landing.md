@@ -66,3 +66,4 @@ Create a static one-pager landing page with a "Получить прокси" bu
 
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 opencode-executor: in_review; tests N/A (no code tests for static infra); shellcheck pass; validate_docs.py pass.
+- 2026-07-02 executor: fix F-H1 (optional DOMAIN handling).

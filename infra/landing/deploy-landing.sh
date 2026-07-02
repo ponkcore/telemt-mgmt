@@ -45,8 +45,19 @@ load_env "$ENV_FILE"
 BOT_URL="$(prompt_for "BOT_URL" "Enter Telegram bot URL (e.g. https://t.me/myproxybot)")"
 save_env_var "$ENV_FILE" "BOT_URL" "$BOT_URL"
 
-DOMAIN="$(prompt_for "DOMAIN" "Enter domain for HTTPS (leave empty for HTTP-only)" "")"
-save_env_var "$ENV_FILE" "DOMAIN" "$DOMAIN"
+# DOMAIN is optional — prompt_for fatal-errors on empty input, so handle manually.
+# On re-run, DOMAIN is already loaded from .env (even if empty).
+if [[ -n "${DOMAIN:-}" ]]; then
+    # Already set from .env — use as-is.
+    :
+elif [[ -v DOMAIN ]]; then
+    # DOMAIN is set but empty (e.g. DOMAIN= in .env) — keep as empty (HTTP-only).
+    :
+else
+    printf "Enter domain for HTTPS (leave empty for HTTP-only): "
+    read -r DOMAIN
+fi
+save_env_var "$ENV_FILE" "DOMAIN" "${DOMAIN:-}"
 
 echo ""
 echo "✓ Configuration saved to $ENV_FILE"
