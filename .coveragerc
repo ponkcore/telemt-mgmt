@@ -1,0 +1,7 @@
+[run]
+source = api
+concurrency = thread, greenlet
+parallel = True
+
+[report]
+show_missing = True
