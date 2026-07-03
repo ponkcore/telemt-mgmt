@@ -29,7 +29,7 @@ set -euo pipefail
 
 # ── Resolve script directory (handles symlinks) ──────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INFRA_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$(cd "$INFRA_DIR/.." && pwd)"
 
 # Source shared helpers (infra/lib/common.sh).
@@ -202,8 +202,9 @@ else
             -d "$PANEL_DOMAIN" \
             --non-interactive --agree-tos \
             --register-unsafely-without-email \
-            --cert-path "$CERT_DIR/fullchain.pem" \
-            --key-path "$CERT_DIR/privkey.pem" \
+            --config-dir "$LE_DIR" \
+            --work-dir "$LE_DIR" \
+            --logs-dir "$LE_DIR/logs" \
             2>/dev/null || {
             echo "⚠  certbot failed. Using self-signed certificate for now."
             echo "  Run 'certbot certonly --standalone -d ${PANEL_DOMAIN}' manually."

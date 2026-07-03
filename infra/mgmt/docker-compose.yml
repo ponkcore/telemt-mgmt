@@ -31,7 +31,6 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-      - /app/.venv
     security_opt:
       - no-new-privileges:true
     cap_drop:
