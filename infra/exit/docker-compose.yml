@@ -1,5 +1,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# docker-compose.yml — telemt + Angie on the EU exit server.
+# docker-compose.yml — telemt + Xray-exit + Angie on the EU exit server.
+#
+# Per ARCH-001@0.2.0 §3 C5/C7 / ADR-009@0.2.0:
+#   - Xray-exit terminates the VLESS-Reality tunnel from the entry server on :443
+#   - Xray-exit forwards decrypted MTProto to telemt on localhost:8443
+#   - telemt listens on :8443 (internal only, not exposed externally)
+#   - Angie serves the mask host on :8080 (NOT :443)
+#   - All services use network_mode: host (for localhost:8443 communication)
 #
 # Per INV-DOCKER (project.jsonc invariants):
 #   cap_drop: [ALL], read_only: true where possible,
@@ -7,8 +14,6 @@
 #   telemt adds cap_add: [NET_BIND_SERVICE]
 #
 # Per ARCH-001 §3 C5 / knowledge report §7.5:
-#   - telemt binds :443 (MTProto/FakeTLS), :9090 (Prometheus), :9091 (API)
-#   - Angie serves the mask host on :8080 (NOT :443)
 #   - ulimit nofile: 65536 soft, 262144 hard
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -17,10 +22,7 @@ services:
     image: ghcr.io/telemt/telemt:latest
     container_name: telemt-exit
     restart: unless-stopped
-    ports:
-      - "443:443"
-      - "9090:9090"
-      - "9091:9091"
+    network_mode: host
     volumes:
       - ./config:/etc/telemt:rw
       - telemt-data:/var/lib/telemt:rw
@@ -39,15 +41,35 @@ services:
       nofile:
         soft: 65536
         hard: 262144
-    networks:
-      - exit
+
+  xray-exit:
+    image: ghcr.io/xtls/xray-core:latest
+    container_name: xray-exit
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./xray-config.json:/etc/xray/config.json:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 262144
+    depends_on:
+      - telemt
 
   angie:
     image: angie/angie:latest
     container_name: telemt-mask
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    network_mode: host
     volumes:
       - ./mask:/var/www/mask:ro
       - ./angie.conf:/etc/angie/angie.conf:ro
@@ -62,14 +84,8 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
-    networks:
-      - exit
     depends_on:
       - telemt
 
 volumes:
   telemt-data:
-
-networks:
-  exit:
-    driver: bridge

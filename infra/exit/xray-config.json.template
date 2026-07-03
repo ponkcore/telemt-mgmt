@@ -7,16 +7,16 @@
   },
   "inbounds": [
     {
-      "tag": "vless-reality-in",
+      "tag": "vless-reality-exit-in",
       "listen": "0.0.0.0",
       "port": 443,
       "protocol": "vless",
       "settings": {
         "clients": [
           {
-            "id": "__VLESS_UUID_ENTRY__",
+            "id": "__EXIT_VLESS_UUID__",
             "level": 0,
-            "email": "telemt-entry@default"
+            "email": "entry-relay@exit"
           }
         ],
         "decryption": "none"
@@ -26,14 +26,14 @@
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "dest": "__REALITY_SNI__:443",
-          "xver": 1,
-          "serverNames": [__REALITY_SERVER_NAMES__],
-          "privateKey": "__REALITY_PRIVATE_KEY__",
+          "dest": "__EXIT_REALITY_SNI__:443",
+          "xver": 0,
+          "serverNames": ["__EXIT_REALITY_SNI__"],
+          "privateKey": "__EXIT_REALITY_PRIVATE_KEY__",
           "minClientVer": "",
           "maxClientVer": "",
           "maxTimeDiff": 0,
-          "shortIds": [__REALITY_SHORT_IDS__],
+          "shortIds": [__EXIT_REALITY_SHORT_IDS_JSON__],
           "fingerprint": "firefox"
         }
       },
@@ -49,32 +49,11 @@
   ],
   "outbounds": [
     {
-      "tag": "proxy-to-exit",
-      "protocol": "vless",
+      "tag": "to-telemt",
+      "protocol": "freedom",
       "settings": {
-        "vnext": [
-          {
-            "address": "__EXIT_SERVER_IP__",
-            "port": 443,
-            "users": [
-              {
-                "id": "__EXIT_VLESS_UUID__",
-                "encryption": "none",
-                "flow": "xtls-rprx-vision"
-              }
-            ]
-          }
-        ]
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "serverName": "__EXIT_REALITY_SNI__",
-          "fingerprint": "firefox",
-          "shortId": "__EXIT_SHORT_ID__",
-          "publicKey": "__EXIT_PUBLIC_KEY__"
-        }
+        "domainStrategy": "AsIs",
+        "redirect": "127.0.0.1:8443"
       }
     },
     {
@@ -99,7 +78,7 @@
     "rules": [
       {
         "type": "field",
-        "outboundTag": "proxy-to-exit",
+        "outboundTag": "to-telemt",
         "network": "tcp,udp"
       }
     ]

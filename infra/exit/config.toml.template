@@ -27,7 +27,7 @@ quota_state_path = "/var/lib/telemt/quota-state.json"
 tls = true
 
 [server]
-port = 443
+port = 8443
 # proxy_protocol: parse incoming PROXY header (v1 or v2, auto-detected).
 proxy_protocol = true
 # Prometheus metrics — bound to localhost, accessible via UFW-restricted port.
