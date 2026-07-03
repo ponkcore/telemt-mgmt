@@ -1,7 +1,7 @@
 ---
 id: TKT-018
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.2.0
 depends_on: [TKT-015@0.2.0]
 estimate: L
@@ -80,3 +80,5 @@ Replace the `freedom` (raw TCP) outbound on the entry server with a VLESS-Realit
 
 ## §10 Execution Log
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
+- 2026-07-04 opencode-executor: started implementation of §5 Outputs (6 files).
+- 2026-07-04 opencode-executor: implemented §5 Outputs (6 files), checks green, PR opened
