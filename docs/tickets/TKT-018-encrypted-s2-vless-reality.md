@@ -1,7 +1,7 @@
 ---
 id: TKT-018
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.0
 depends_on: [TKT-015@0.2.0]
 estimate: L
@@ -82,3 +82,5 @@ Replace the `freedom` (raw TCP) outbound on the entry server with a VLESS-Realit
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
 - 2026-07-04 opencode-executor: started implementation of §5 Outputs (6 files).
 - 2026-07-04 opencode-executor: implemented §5 Outputs (6 files), checks green, PR opened
+- 2026-07-04 opencode-orchestrator: RV-CODE-018-01 verdict=fail (F-H1: exit xver:0 breaks PROXYv1 chain; F-M1: ticket status draft); fixed exit xver 0→1 + status→in_review.
+- 2026-07-04 opencode-orchestrator: merged in b8a8ea7; RV-CODE-018-02 verdict=pass; all 15 ACs met.
