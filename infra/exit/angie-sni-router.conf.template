@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# angie-sni-router.conf.template — Angie SNI routing for shared exit servers.
+#
+# ALTERNATIVE to the default angie.conf.template. Use this when telemt shares
+# the exit server with other TLS-based services and they all need port 443.
+#
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ Standalone mode (default)          vs.   Shared mode (this template)     │
+# │ ─────────────────────────────────         ────────────────────────────── │
+# │ telemt owns :443 directly               Angie owns :443 (SNI routing)    │
+# │ Angie serves mask on :8080 only         Angie routes by SNI to backends  │
+# │ No stream block                         stream block with ssl_preread    │
+# │ config.toml: port = 443                 config.toml: port = 8443         │
+# │ docker-compose: "443:443"               docker-compose: "8443:8443"      │
+# │                                          + "443:443" on angie service    │
+# └──────────────────────────────────────────────────────────────────────────┘
+#
+# How SNI routing works:
+#   1. Client sends TLS ClientHello with SNI=<domain> to :443
+#   2. Angie reads SNI via ssl_preread (NO decryption, NO certificates)
+#   3. Angie routes the raw TCP stream to the matching backend
+#   4. Backend (telemt on :8443, other service on :8445, etc.) handles TLS
+#
+# Placeholder (replace before deploying):
+#   __TELEMT_SNI__ — the domain clients use for the telemt proxy service
+#                    (e.g. proxy.example.com). This is the SNI that appears in
+#                    the TLS ClientHello when a Telegram client connects.
+#
+# Per ARCH-001 §3 C5 / ADR-008@0.2.0:
+#   - Default route (unknown SNI) → telemt backend (defense in depth)
+#   - telemt moves to internal port :8443 (not directly exposed)
+#   - Angie mask_host on :8080 is preserved (same as standalone mode)
+#
+# Per TELEMT_TSPU_EVASION_PATTERNS.md Pattern 4:
+#   Production infrastructure uses this pattern to share :443 across multiple
+#   TLS services on a single server IP.
+#
+# Deploy steps (manual — deploy-exit.sh is NOT modified per TKT-016 §3):
+#   1. Replace __TELEMT_SNI__ with your telemt service domain
+#   2. Add additional SNI→backend entries for co-located services
+#   3. Change config.toml: port = 443 → port = 8443
+#   4. Change docker-compose.yml: move "443:443" from telemt to angie service,
+#      add "8443:8443" (or "127.0.0.1:8443:8443") to telemt
+#   5. Copy this file to angie.conf and run docker compose up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+worker_processes auto;
+
+events {
+    worker_connections 256;
+}
+
+# ── Stream block: SNI routing on :443 ─────────────────────────────────────
+# The stream module routes raw TCP by reading the SNI field from the TLS
+# ClientHello. No decryption occurs — Angie never sees plaintext or handles
+# certificates. Each backend terminates its own TLS.
+stream {
+
+    # Map $ssl_preread_server_name (SNI from ClientHello) → backend address.
+    # Add one line per co-located TLS service. Example entry commented out.
+    map $ssl_preread_server_name $sni_backend {
+        __TELEMT_SNI__           127.0.0.1:8443;  # telemt (FakeTLS/MTProto)
+        # other.example.com      127.0.0.1:8445;  # other TLS service
+        default                  127.0.0.1:8443;  # unknown SNI → telemt
+    }
+
+    # SNI routing server — listens on :443, forwards raw TCP by SNI.
+    server {
+        listen 443;
+        listen [::]:443;
+        ssl_preread on;
+        proxy_pass $sni_backend;
+
+        # Reasonable timeouts for proxied TCP connections.
+        proxy_connect_timeout 5s;
+        proxy_timeout 300s;
+    }
+}
+
+# ── HTTP block: mask host on :8080 ────────────────────────────────────────
+# Identical to the standalone angie.conf.template. Serves the mask (stub)
+# page for non-TLS / direct HTTP requests that land on :8080.
+# Per ARCH-001 §3 C5: "Angie serves mask_host on :8080 (NOT :443)".
+http {
+    include       /etc/angie/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile    on;
+    tcp_nopush  on;
+    keepalive_timeout 65;
+
+    # Mask host server — listens on :8080, serves the stub page.
+    server {
+        listen 8080;
+        listen [::]:8080;
+        server_name _;
+
+        root /var/www/mask;
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }
+}
