@@ -1,7 +1,7 @@
 ---
 id: TKT-006
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-004@0.1.1]
 estimate: S
@@ -64,3 +64,4 @@ Implement a runnable standalone Telegram bot that demonstrates the `telemt_proxy
 - 2026-07-02 architect: ticket created.
 - 2026-07-03 opencode-executor: started; clean tree from origin/main.
 - 2026-07-03 opencode-executor: in_review; tests 22 pass; lint clean; typecheck clean; coverage 94%.
+- 2026-07-03 opencode-orchestrator: merged in 5f9d665; RV-CODE-006 verdict=pass_with_changes; 1 Medium, 2 Lows backlogged.
