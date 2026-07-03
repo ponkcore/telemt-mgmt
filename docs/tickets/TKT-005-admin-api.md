@@ -1,7 +1,7 @@
 ---
 id: TKT-005
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-002@0.1.0, TKT-003@0.1.0]
 estimate: L
@@ -85,3 +85,6 @@ Implement the FastAPI admin API with JWT authentication, user management, labell
 ## §10 Execution Log
 
 - 2026-07-02 architect: ticket created.
+- 2026-07-03 opencode-executor: started
+- 2026-07-03 opencode-executor: in_review; tests 41 pass; lint clean; typecheck clean; coverage 95%
+- 2026-07-03 executor: fix F-H1 (add types-python-jose for mypy strict)
