@@ -138,11 +138,11 @@ print_verification_command() {
     echo ""
     echo "For ${server_type} server, also verify:"
     if [[ "$server_type" == "exit" ]]; then
-        echo "  ssh root@\$(dig +short ${domain}) 'docker compose ps'  # telemt + Angie running"
-        echo "  curl -s http://\$(dig +short ${domain}):8080           # Angie mask host responds"
+        echo "  ssh root@${domain} 'docker compose ps'  # telemt + Angie running"
+        echo "  curl -s http://${domain}:8080           # Angie mask host responds"
     else
-        echo "  ssh root@\$(dig +short ${domain}) 'docker compose ps'  # Xray container running"
-        echo "  curl -s https://${domain}                               # Reality handshake responds"
+        echo "  ssh root@${domain} 'docker compose ps'  # Xray container running"
+        echo "  curl -s https://${domain}               # Reality handshake responds"
     fi
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -328,14 +328,15 @@ fi
 # Run the deploy script on the new server non-interactively.
 # The transferred .env file provides all configuration (INV-IDEMPOTENT).
 echo "→ Running deploy script (non-interactive, using transferred .env)..."
-if ssh "${SSH_USER}@${NEW_SERVER_IP}" \
+if ! ssh "${SSH_USER}@${NEW_SERVER_IP}" \
     "cd ${REMOTE_REPO} 2>/dev/null && bash ${DEPLOY_SCRIPT} 2>&1 || \
-     (cd /opt/telemt-mgmt 2>/dev/null && bash ${DEPLOY_SCRIPT} 2>&1) || \
-     echo 'DEPLOY_WARNING: Could not run deploy script automatically — run manually'"; then
-    echo "✓ Deploy script completed on new server."
-else
-    echo "⚠  Deploy script reported issues — verify manually."
+     (cd /opt/telemt-mgmt 2>/dev/null && bash ${DEPLOY_SCRIPT} 2>&1)"; then
+    echo "✗ Deploy script failed on new server." >&2
+    echo ""
+    print_rollback_instructions "$OLD_SERVER_IP" "$NEW_SERVER_IP" "$DOMAIN" "$SERVER_TYPE" "$REMOTE_TAR"
+    exit 1
 fi
+echo "✓ Deploy script completed on new server."
 
 # ── STEP 6: Update Cloudflare DNS A-record (AC2, AC3) ───────────────────────
 banner "STEP 6/8: Update Cloudflare DNS A-record (AC2, AC3)"
@@ -362,64 +363,44 @@ fi
 # ── STEP 7: Health check on new server (AC5) ────────────────────────────────
 banner "STEP 7/8: Health check on new server (AC5)"
 
-echo "→ Waiting for DNS propagation (TTL=60s max)..."
-echo "  Checking ${DOMAIN} resolves to ${NEW_SERVER_IP}..."
+echo "→ Waiting for new server to accept connections (TTL=60s max)..."
 
-# Wait for DNS to propagate (check up to 60 seconds, TTL=60).
+# Wait for DNS propagation + container startup (up to ~2 min, TTL=60).
+# Uses only curl (no dig/seq — §7 Constraints: tar, scp, curl, jq only).
 HEALTH_CHECK_OK=false
-for _attempt in $(seq 1 12); do
-    _resolved_ip=$(dig +short "$DOMAIN" 2>/dev/null | head -1)
-    if [[ "$_resolved_ip" == "$NEW_SERVER_IP" ]]; then
-        echo "  ✓ DNS resolved to ${NEW_SERVER_IP} (attempt ${_attempt}/12)"
+for (( _attempt = 1; _attempt <= 12; _attempt++ )); do
+    if curl -sf --connect-timeout 5 --max-time 10 "https://${DOMAIN}" >/dev/null 2>&1; then
+        echo "  ✓ New server responding at ${DOMAIN} (attempt ${_attempt}/12)"
         HEALTH_CHECK_OK=true
         break
     fi
-    echo "  → DNS not yet propagated (attempt ${_attempt}/12: got ${_resolved_ip:-empty})..."
-    sleep 5
+    echo "  → Waiting for DNS propagation + container startup (${_attempt}/12)..."
+    sleep 10
 done
 
+# If domain check failed (DNS not yet propagated), try Docker status on new server.
 if [[ "$HEALTH_CHECK_OK" != "true" ]]; then
-    echo "⚠  DNS not propagated after 60s — continuing with direct IP health check."
-    echo "  (DNS may still be caching the old record from a previous TTL.)"
-fi
-
-# Health check: verify the new server is accepting connections (AC5).
-echo ""
-echo "→ Health check: verifying new server is accepting connections..."
-
-# Try via domain first (if DNS propagated), then via Docker status on the new server.
-HEALTH_ENDPOINT="https://${DOMAIN}"
-if curl -s --connect-timeout 10 --max-time 15 -o /dev/null -w "%{http_code}" "$HEALTH_ENDPOINT" 2>/dev/null | \
-    grep -qE '^(2|3)'; then
-    echo "✓ Health check passed via domain (${DOMAIN})."
-    HEALTH_CHECK_OK=true
-else
     echo "⚠  Domain health check failed — trying Docker status on new server..."
-    # Check if Docker containers are running on the new server.
     if ssh "${SSH_USER}@${NEW_SERVER_IP}" \
         "docker compose -f ${REMOTE_CONFIG_PATH}/docker-compose.yml ps 2>/dev/null | \
          grep -q 'Up' 2>/dev/null || \
          docker ps 2>/dev/null | grep -q 'Up'"; then
         echo "✓ Health check passed via Docker container status on new server."
         HEALTH_CHECK_OK=true
-    else
-        echo "⚠  Could not verify server health via Docker status."
-        echo "  Verify manually: ssh ${SSH_USER}@${NEW_SERVER_IP} 'docker compose ps'"
     fi
 fi
 
 if [[ "$HEALTH_CHECK_OK" != "true" ]]; then
     echo ""
-    echo "⚠  Health check could not confirm the new server is accepting connections."
-    echo "  This may be due to DNS propagation delay or container startup time."
+    echo "✗ Health check failed: new server is not accepting connections." >&2
+    echo "  This may be due to DNS propagation delay or container startup time." >&2
     echo ""
     print_rollback_instructions "$OLD_SERVER_IP" "$NEW_SERVER_IP" "$DOMAIN" "$SERVER_TYPE" "$REMOTE_TAR"
-    echo ""
-    echo "If the new server is healthy, proceed with manual verification (AC9)."
-else
-    echo ""
-    echo "✓ New server is accepting connections."
+    exit 1
 fi
+
+echo ""
+echo "✓ New server is accepting connections."
 
 # ── STEP 8: Output rollback instructions and verification command ───────────
 banner "STEP 8/8: Migration complete"

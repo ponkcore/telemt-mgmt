@@ -74,3 +74,4 @@ Implement a migration script that moves a telemt exit server to a new server wit
 - 2026-07-02 architect: patched per RV-ARCH-001 finding L2 (post-migration user-reconnect verification AC added).
 - 2026-07-03 opencode-executor: started — implementing scripts/migrate.sh and scripts/cloudflare-dns.sh.
 - 2026-07-03 opencode-executor: in_review; tests 0 (bash scripts — no test framework); lint clean (shellcheck pass on both); typecheck N/A (bash).
+- 2026-07-03 executor: fix F-H1 (deploy failure masking), F-H2 (dig/seq removal), F-M1 (health check exit)
