@@ -7,10 +7,10 @@ status: in_review
 created: 2026-07-03
 ---
 
-# RV-CODE-004: review of TKT-004 (PR #9)
+# RV-CODE-004: review of TKT-004@0.1.1 (PR #9)
 
 **Verdict:** pass_with_changes
-**Summary:** All §6 ACs are verifiably met in spirit and the TKT-004 modules pass typecheck, lint, and tests with 100 % coverage; however, the PR deviates from strict scope by touching `pyproject.toml`/`uv.lock`, and the AC2 example input is rejected by the implemented salt-length validation.
+**Summary:** All §6 ACs are verifiably met in spirit and the TKT-004@0.1.1 modules pass typecheck, lint, and tests with 100 % coverage; however, the PR deviates from strict scope by touching `pyproject.toml`/`uv.lock`, and the AC2 example input is rejected by the implemented salt-length validation.
 
 ## Contract compliance
 - [x] Diff modifies ONLY §5 Outputs (+ ticket status/§10) — **deviation noted**: `pyproject.toml` and `uv.lock` are also modified (see F-M1).
@@ -28,7 +28,7 @@ created: 2026-07-03
 - AC5 — Router returns existing link on subsequent interactions by same Telegram user (dedup via `telegram_id_hash`): `telemt_proxy/router.py:180-184`; `tests/test_router.py:315-346`.
 - AC6 — No raw Telegram IDs stored in DB or sent to telemt: `telemt_proxy/router.py:168-200`; `tests/test_router.py:348-388`.
 - AC7 — Link uses domain name in `server=` field (INV-DOMAIN): `telemt_proxy/link.py:11-31`; `tests/test_router.py:454-470`.
-- AC8 — `mypy --strict` passes on all TKT-004 source files.
+- AC8 — `mypy --strict` passes on all TKT-004@0.1.1 source files.
 - AC9 — Tests achieve ≥80 % coverage on `router.py`, `hashing.py`, `link.py`, `qr.py` (100 % on all four modules).
 - AC10 — Router sends QR code image (PNG) alongside proxy link: `telemt_proxy/router.py:216-219`; `telemt_proxy/qr.py:18-44`; `tests/test_qr.py`.
 - AC11 — `create_router()` signature includes optional `tier_service=None` parameter: `telemt_proxy/router.py:90-95`; `tests/test_router.py:248-283`.
