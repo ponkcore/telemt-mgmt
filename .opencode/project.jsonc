@@ -24,14 +24,22 @@
     "test_framework": "pytest"
   },
 
+  "environment": {
+    "dev_os": "NixOS",
+    "dev_shell": "shell.nix",
+    "fhs": false,
+    "note": "Non-FHS system. All commands in project.jsonc.commands are wrapped in `nix-shell --run '...'`. shell.nix sets LD_LIBRARY_PATH for manylinux C-extension wheels (greenlet, asyncpg, Pillow). Enter dev shell with `nix-shell` before running anything manually."
+  },
+
   "commands": {
-    // Python backend + bot
-    "install": "uv sync && cd frontend && npm ci",
-    "typecheck": "uv run mypy --strict telemt_proxy api bot && cd frontend && npx tsc --noEmit",
-    "lint": "uv run ruff check telemt_proxy api bot tests && cd frontend && npx eslint src",
-    "test": "uv run pytest -q",
-    "coverage": "uv run pytest --cov=telemt_proxy --cov=api --cov=bot --cov-report=term-missing",
-    "build": "cd frontend && npm run build"
+    // Python backend + bot. All commands run inside nix-shell (see shell.nix).
+    // NixOS needs LD_LIBRARY_PATH for manylinux C-extension wheels (greenlet, asyncpg, Pillow).
+    "install": "nix-shell --run 'uv sync && cd frontend && npm ci'",
+    "typecheck": "nix-shell --run 'uv run mypy --strict telemt_proxy api bot && cd frontend && npx tsc --noEmit'",
+    "lint": "nix-shell --run 'uv run ruff check telemt_proxy api bot tests && cd frontend && npx eslint src'",
+    "test": "nix-shell --run 'uv run pytest -q'",
+    "coverage": "nix-shell --run 'uv run pytest --cov=telemt_proxy --cov=api --cov=bot --cov-report=term-missing'",
+    "build": "nix-shell --run 'cd frontend && npm run build'"
   },
 
   "conventions": {

@@ -49,7 +49,7 @@ architecture-reviewer) live in `.opencode/agents/<name>.md` and are set via
 ## How to start work (any agent)
 
 1. Identify your role; load its file (table below).
-2. Read `.opencode/project.jsonc` — your stack, commands, conventions, invariants.
+2. Read `.opencode/project.jsonc` — your stack, commands, conventions, invariants. Check `environment` (dev OS, FHS, dev shell) — on NixOS all commands run inside `nix-shell`.
 3. Confirm your write-zone in `CONTRIBUTING.md`. Crossing it = reviewer reject (or, for code, blocked by `opencode.json`).
 4. Run `python3 scripts/validate_docs.py` before pushing. CI runs the same check.
 
