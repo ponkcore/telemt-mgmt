@@ -7,7 +7,7 @@ status: in_review
 created: 2026-07-04
 ---
 
-# RV-CODE-016: review of TKT-016 — Angie SNI Routing Template for Shared Exit Servers (PR #16)
+# RV-CODE-016: review of TKT-016@0.2.0 — Angie SNI Routing Template for Shared Exit Servers (PR #16)
 
 **Verdict:** pass
 **Summary:** The PR delivers the optional Angie SNI routing template and README documentation; all ACs are met, no High/Medium findings, and the Angie config validates successfully with `angie -t`.
@@ -43,7 +43,7 @@ created: 2026-07-04
 - concurrency: N/A — template is declarative; no application-level concurrency.
 - input_validation: N/A — SNI is parsed by Angie's `ssl_preread` from the TLS ClientHello; no user input is processed.
 - prompt_injection: N/A — no LLM prompts in this change.
-- authz_isolation: Shared mode keeps telemt on internal port 8443 and only Angie exposes 443, matching the defense-in-depth intent of ADR-008.
+- authz_isolation: Shared mode keeps telemt on internal port 8443 and only Angie exposes 443, matching the defense-in-depth intent of ADR-008@0.2.0.
 - secrets: No secrets in the template; only `__TELEMT_SNI__` placeholder and local backend addresses.
 - observability: N/A — no metrics/logging added or removed.
 - rollback: N/A — rollback is operator-driven by reverting to `angie.conf.template`.
