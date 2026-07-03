@@ -1,0 +1,139 @@
+# syntax=docker/dockerfile:1
+# ─────────────────────────────────────────────────────────────────────────────
+# Dockerfile.api — FastAPI admin API + Telegram bot in a single container.
+#
+# Per ARCH-001@0.1.1 §3 C5: the management server runs bot + API in a single
+# Python container. This Dockerfile builds that image from python:3.12-slim
+# (per §7 Constraints).
+#
+# The entrypoint runs alembic migrations (AC4), creates the initial admin
+# user (ADR-002), then starts both uvicorn (API) and the bot (long polling,
+# AC6) concurrently.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM python:3.12-slim
+
+# Install build deps for bcrypt/asyncpg, then clean up in the same layer.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast dependency installation.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Set working directory.
+WORKDIR /app
+
+# Copy pyproject.toml and install dependencies first (layer caching).
+COPY pyproject.toml ./
+
+# Install runtime dependencies only (no dev groups).
+RUN uv sync --no-dev --no-install-project
+
+# Copy application source: api, bot, telemt_proxy packages + alembic.
+COPY api/ ./api/
+COPY bot/ ./bot/
+COPY telemt_proxy/ ./telemt_proxy/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
+
+# Create entrypoint script inline (no separate file needed).
+RUN <<'ENTRYSCRIPT' cat > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Add venv to PATH so python, uvicorn, alembic are available.
+export PATH="/app/.venv/bin:$PATH"
+
+# ── Wait for PostgreSQL to be ready (AC4 prerequisite) ───────────────────────
+echo "→ Waiting for database..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+until python -c "
+import asyncio, os, asyncpg
+async def check():
+    try:
+        conn = await asyncpg.connect(os.environ['DATABASE_URL'].replace('+asyncpg','').replace('postgresql','postgresql'))
+        await conn.close()
+    except Exception:
+        raise SystemExit(1)
+asyncio.run(check())
+" 2>/dev/null; do
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "ERROR: Database not ready after $MAX_RETRIES attempts." >&2
+        exit 1
+    fi
+    echo "  Database not ready, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
+    sleep 2
+done
+echo "✓ Database is ready."
+
+# ── Run alembic migrations (AC4) ─────────────────────────────────────────────
+echo "→ Running alembic migrations..."
+alembic upgrade head
+echo "✓ Migrations complete."
+
+# ── Create initial admin user (ADR-002@0.1.0) ───────────────────────────────
+echo "→ Creating initial admin user if not exists..."
+python -c "
+import asyncio
+import os
+import bcrypt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from telemt_proxy.models import AdminUser
+
+async def create_admin():
+    engine = create_async_engine(os.environ['DATABASE_URL'])
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with factory() as session:
+        result = await session.execute(
+            select(AdminUser).where(AdminUser.username == os.environ['ADMIN_USERNAME'])
+        )
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            print(f'  Admin user \"{os.environ[\"ADMIN_USERNAME\"]}\" already exists.')
+            return
+        hashed = bcrypt.hashpw(
+            os.environ['ADMIN_PASSWORD'].encode('utf-8'),
+            bcrypt.gensalt(),
+        ).decode('utf-8')
+        session.add(AdminUser(
+            username=os.environ['ADMIN_USERNAME'],
+            password_hash=hashed,
+        ))
+        await session.commit()
+        print(f'  Admin user \"{os.environ[\"ADMIN_USERNAME\"]}\" created.')
+    await engine.dispose()
+
+asyncio.run(create_admin())
+"
+echo "✓ Admin user setup complete."
+
+# ── Start API server (AC5 — panel accessible) ────────────────────────────────
+echo "→ Starting uvicorn (admin API)..."
+uvicorn api.main:app --host 0.0.0.0 --port 8000 &
+
+# ── Start bot (AC6 — long polling) ───────────────────────────────────────────
+echo "→ Starting Telegram bot (long polling)..."
+python -m bot &
+
+# Wait for any background process to exit (container stops if either crashes).
+wait -n
+EXIT_CODE=$?
+echo "A service exited with code $EXIT_CODE. Stopping all services..."
+kill "$(jobs -p)" 2>/dev/null || true
+exit "$EXIT_CODE"
+ENTRYSCRIPT
+
+# Non-root user for the application.
+RUN useradd -r -s /bin/bash appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/entrypoint.sh"]
