@@ -1,7 +1,7 @@
 ---
 id: TKT-017
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.0
 depends_on: [TKT-018@0.2.0]
 estimate: S
@@ -51,3 +51,4 @@ Add Russian datacenter provider recommendations and warnings to the entry server
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
 - 2026-07-04 opencode-executor: started; reading inputs, implementing §5 Outputs.
 - 2026-07-04 opencode-executor: implemented §5 Outputs, checks green, PR opened.
+- 2026-07-04 opencode-orchestrator: merged in e8dbbac; RV-CODE-017-01 verdict=pass; all 5 ACs met.
