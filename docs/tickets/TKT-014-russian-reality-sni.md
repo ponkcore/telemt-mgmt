@@ -1,7 +1,7 @@
 ---
 id: TKT-014
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.0
 depends_on: []
 estimate: S
@@ -58,3 +58,5 @@ Update the entry server Reality SNI default from `yahoo.com` to `ads.x5.ru` (Rus
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
 - 2026-07-04 opencode-executor: started — read all §4 inputs, beginning implementation of §5 Outputs.
 - 2026-07-04 opencode-executor: in_review; implemented §5 Outputs, all AC verified (AC1-AC7), typecheck/lint/test green, shellcheck clean, docs-ci green.
+- 2026-07-04 opencode-orchestrator: RV-CODE-014-01 verdict=fail (F-H1: empty REALITY_SNI_SECONDARY idempotency); re-dispatched executor iter 2.
+- 2026-07-04 opencode-orchestrator: merged in 1db50ca; RV-CODE-014-02 verdict=pass; F-H1 resolved (grep-based key-existence check).
