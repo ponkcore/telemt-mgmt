@@ -8,7 +8,8 @@
 #
 # Prompts for (first run; reads .env on re-run — INV-IDEMPOTENT):
 #   EXIT_SERVER_IP       — IP/FQDN of the EU exit server
-#   REALITY_SNI          — SNI for Reality (recommend: vkvideo.ru / yahoo.com)
+#   REALITY_SNI          — SNI for Reality (default: ads.x5.ru, Russian CDN)
+#   REALITY_SNI_SECONDARY — Optional secondary serverNames entry (e.g. ya.ru)
 #   REALITY_PRIVATE_KEY  — X25519 private key (auto-generate option)
 #   REALITY_SHORT_IDS    — Comma-separated short IDs (auto-generate option)
 #
@@ -66,11 +67,27 @@ load_env "$ENV_FILE"
 EXIT_SERVER_IP="$(prompt_for "EXIT_SERVER_IP" "Enter exit server IP or FQDN")"
 save_env_var "$ENV_FILE" "EXIT_SERVER_IP" "$EXIT_SERVER_IP"
 
-# REALITY_SNI — recommended: vkvideo.ru (RU domestic), yahoo.com (telemt default).
+# REALITY_SNI — default: ads.x5.ru (X5 Retail CDN, TSPU-whitelisted, production-validated Jul 2026).
+# Secondary serverNames entry is optional (see REALITY_SNI_SECONDARY below).
 REALITY_SNI="$(prompt_for "REALITY_SNI" \
-    "Enter Reality SNI (recommend: vkvideo.ru for RU domestic, yahoo.com as default)" \
-    "yahoo.com")"
+    "Enter Reality SNI (default: ads.x5.ru — Russian CDN, TSPU-whitelisted)" \
+    "ads.x5.ru")"
 save_env_var "$ENV_FILE" "REALITY_SNI" "$REALITY_SNI"
+
+# REALITY_SNI_SECONDARY — optional second serverNames entry for resilience.
+# Idempotent: if already set in .env (including empty), re-run skips the prompt.
+# When empty, serverNames contains only the primary SNI.
+# When set (e.g. ya.ru), serverNames contains both primary and secondary.
+# Check if key exists in .env (handles empty values correctly for idempotency)
+if grep -q "^REALITY_SNI_SECONDARY=" "$ENV_FILE" 2>/dev/null; then
+    REALITY_SNI_SECONDARY="${REALITY_SNI_SECONDARY:-}"
+    echo "✓ REALITY_SNI_SECONDARY already set (from .env): ${REALITY_SNI_SECONDARY:-<not set>}"
+else
+    printf "Enter optional secondary Reality SNI (e.g. ya.ru, leave empty to skip): "
+    read -r REALITY_SNI_SECONDARY
+fi
+save_env_var "$ENV_FILE" "REALITY_SNI_SECONDARY" "${REALITY_SNI_SECONDARY}"
+export REALITY_SNI_SECONDARY
 
 # REALITY_PRIVATE_KEY — auto-generate using xray x25519 if not provided.
 # On re-run, prompt_for() returns the existing value from .env without prompting.
@@ -151,11 +168,22 @@ echo "→ Generating xray-config.json from template..."
 # JSON array body (no brackets) so we wrap each value in double quotes.
 REALITY_SHORT_IDS_JSON=$(echo "$REALITY_SHORT_IDS" | sed 's/,/", "/g; s/^/"/; s/$/"/')
 
+# Build REALITY_SERVER_NAMES JSON array body from primary + optional secondary SNI.
+# When REALITY_SNI_SECONDARY is empty: "ads.x5.ru"
+# When REALITY_SNI_SECONDARY is set:  "ads.x5.ru", "ya.ru"
+if [[ -n "${REALITY_SNI_SECONDARY:-}" ]]; then
+    REALITY_SERVER_NAMES_JSON="\"${REALITY_SNI}\", \"${REALITY_SNI_SECONDARY}\""
+else
+    REALITY_SERVER_NAMES_JSON="\"${REALITY_SNI}\""
+fi
+
+
 # Substitute placeholders in the template.
 # Use sed with a delimiter unlikely to appear in keys/IDs.
 sed \
     -e "s|__EXIT_SERVER_IP__|${EXIT_SERVER_IP}|g" \
     -e "s|__REALITY_SNI__|${REALITY_SNI}|g" \
+    -e "s|__REALITY_SERVER_NAMES__|${REALITY_SERVER_NAMES_JSON}|g" \
     -e "s|__REALITY_PRIVATE_KEY__|${REALITY_PRIVATE_KEY}|g" \
     -e "s|__REALITY_SHORT_IDS__|${REALITY_SHORT_IDS_JSON}|g" \
     "$XRAY_TEMPLATE" > "$XRAY_CONFIG"
@@ -197,6 +225,7 @@ echo "║  ✓ Entry server deployed successfully!                        ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo "  Exit server:     $EXIT_SERVER_IP"
 echo "  Reality SNI:     $REALITY_SNI"
+echo "  Secondary SNI:   ${REALITY_SNI_SECONDARY:-(none)}"
 echo "  Listening:       0.0.0.0:443 (VLESS+Reality)"
 echo "  PROXYv2:         enabled (real client IP → exit server)"
 echo "  Fingerprint:     firefox (NOT chrome — blocked since May 2026)"

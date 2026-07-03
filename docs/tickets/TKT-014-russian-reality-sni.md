@@ -1,7 +1,7 @@
 ---
 id: TKT-014
 type: ticket
-status: draft
+status: in_review
 arch_ref: ARCH-001@0.2.0
 depends_on: []
 estimate: S
@@ -56,3 +56,5 @@ Update the entry server Reality SNI default from `yahoo.com` to `ads.x5.ru` (Rus
 
 ## §10 Execution Log
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
+- 2026-07-04 opencode-executor: started — read all §4 inputs, beginning implementation of §5 Outputs.
+- 2026-07-04 opencode-executor: in_review; implemented §5 Outputs, all AC verified (AC1-AC7), typecheck/lint/test green, shellcheck clean, docs-ci green.
