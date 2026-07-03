@@ -28,6 +28,8 @@ tls = true
 
 [server]
 port = 443
+# proxy_protocol: parse incoming PROXY header (v1 or v2, auto-detected).
+proxy_protocol = true
 # Prometheus metrics — bound to localhost, accessible via UFW-restricted port.
 metrics_port = 9090
 metrics_listen = "0.0.0.0:9090"
@@ -46,6 +48,11 @@ tls_domain = "__TLS_DOMAIN__"
 mask = true
 # unknown_sni_action: reject connections with unrecognised SNI (hardening).
 unknown_sni_action = "reject_handshake"
+# mask_proxy_protocol: PROXYv1 (text-based) for client IP preservation.
+# Less fingerprintable than PROXYv2 (binary signature) — see ARCH-001 §3 C5, research §4.
+mask_proxy_protocol = 1
+# tls_emulation: fetch real ServerHello from tls_domain for accurate TLS fingerprint.
+tls_emulation = true
 
 [access.user_max_tcp_conns]
 default_user = 20

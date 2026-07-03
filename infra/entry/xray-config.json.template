@@ -53,8 +53,8 @@
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "AsIs",
-        "redirect": "__EXIT_SERVER_IP__:8443",
-        "proxyProtocol": 2
+        "redirect": "__EXIT_SERVER_IP__:443",
+        "proxyProtocol": 1
       }
     },
     {
