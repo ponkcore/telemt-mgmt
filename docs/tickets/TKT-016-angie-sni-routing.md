@@ -1,7 +1,7 @@
 ---
 id: TKT-016
 type: ticket
-status: draft
+status: in_review
 arch_ref: ARCH-001@0.2.0
 depends_on: []
 estimate: M
@@ -54,3 +54,5 @@ Add an optional Angie SNI routing template that enables co-locating telemt with 
 
 ## §10 Execution Log
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
+- 2026-07-04 opencode-executor: started — implementing §5 Outputs (angie-sni-router.conf.template + README.md shared-server section).
+- 2026-07-04 opencode-executor: in_review; tests 198 pass (1 skip); lint clean; typecheck clean; AC1-AC5 verified, AC6 manual syntax review (angie -t requires exit server Docker image unavailable in dev env).

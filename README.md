@@ -107,6 +107,61 @@ bash infra/landing/deploy-landing.sh
 - ad_tag from @MTProxybot (requires public channel)
 - Cloudflare API token (for migration script)
 
+## Shared-server deployment (optional)
+
+By default, telemt owns port 443 exclusively on the exit server (**standalone
+mode**). For operators who need to co-locate telemt with other TLS-based services
+on a single server, an optional **shared mode** uses Angie SNI stream routing to
+multiplex port 443 across multiple services by their TLS SNI domain.
+
+### Standalone vs. shared mode
+
+| Aspect | Standalone (default) | Shared (optional) |
+|---|---|---|
+| Who owns :443 | telemt directly | Angie (SNI routing) |
+| telemt listen port | 443 | 8443 (internal, not exposed) |
+| Angie role | Mask host on :8080 only | SNI routing on :443 + mask host on :8080 |
+| Config template | `angie.conf.template` | `angie-sni-router.conf.template` |
+| config.toml port | 443 | 8443 |
+| docker-compose ports | telemt: `"443:443"` | angie: `"443:443"`, telemt: `"8443:8443"` |
+| Other TLS services on :443 | Not possible | Yes — one SNI per service |
+| Complexity | Simple | Moderate (SNI map management) |
+| When to use | Dedicated exit server | Shared server / cost optimization |
+
+### How SNI routing works
+
+Angie reads the SNI (Server Name Indication) field from the TLS ClientHello
+**without decrypting** the traffic — no certificates, no keys, no plaintext.
+It routes the raw TCP stream to the matching backend, which terminates its own
+TLS:
+
+```
+Client → :443 → Angie stream (ssl_preread on)
+                 ├─ SNI=proxy.example.com    → 127.0.0.1:8443 (telemt)
+                 ├─ SNI=other.example.com    → 127.0.0.1:8445 (other service)
+                 └─ default (unknown SNI)    → 127.0.0.1:8443 (telemt)
+```
+
+### Deploying in shared mode
+
+The shared-mode template is **not wired into `deploy-exit.sh`** — the operator
+manually selects and configures it. Steps:
+
+1. Copy the template: `cp infra/exit/angie-sni-router.conf.template infra/exit/angie.conf`
+2. Replace `__TELEMT_SNI__` with your telemt service domain
+3. Add additional SNI entries for co-located services
+4. Edit `config.toml`: change `port = 443` to `port = 8443`
+5. Edit `docker-compose.yml`: move `"443:443"` from the telemt service to the
+   angie service, add `"8443:8443"` to telemt
+6. Run `docker compose up -d`
+
+See `infra/exit/angie-sni-router.conf.template` for full inline documentation.
+
+> **Reference:** [ADR-008](docs/architecture/adr/ADR-008-angie-sni-routing-shared-exit.md)
+> documents the architectural decision. Production validation is in
+> [TELEMT_TSPU_EVASION_PATTERNS.md](docs/knowledge/TELEMT_TSPU_EVASION_PATTERNS.md) Pattern 4.
+
+
 ## Embed in an existing bot
 
 ```python
