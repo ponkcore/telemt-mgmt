@@ -1,7 +1,7 @@
 ---
 id: TKT-013
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-008@0.1.1]
 estimate: M
@@ -75,3 +75,4 @@ Implement a migration script that moves a telemt exit server to a new server wit
 - 2026-07-03 opencode-executor: started — implementing scripts/migrate.sh and scripts/cloudflare-dns.sh.
 - 2026-07-03 opencode-executor: in_review; tests 0 (bash scripts — no test framework); lint clean (shellcheck pass on both); typecheck N/A (bash).
 - 2026-07-03 executor: fix F-H1 (deploy failure masking), F-H2 (dig/seq removal), F-M1 (health check exit)
+- 2026-07-03 opencode-orchestrator: merged in 70554b2; RV-CODE-013 verdict=fail→pass (iter 2); F-H3 pre-existing env, Mediums backlogged.
