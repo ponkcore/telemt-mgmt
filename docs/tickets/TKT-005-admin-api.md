@@ -87,3 +87,4 @@ Implement the FastAPI admin API with JWT authentication, user management, labell
 - 2026-07-02 architect: ticket created.
 - 2026-07-03 opencode-executor: started
 - 2026-07-03 opencode-executor: in_review; tests 41 pass; lint clean; typecheck clean; coverage 95%
+- 2026-07-03 executor: fix F-H1 (add types-python-jose for mypy strict)
