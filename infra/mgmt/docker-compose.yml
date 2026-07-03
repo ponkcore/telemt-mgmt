@@ -45,7 +45,7 @@ services:
       - ./frontend/dist:/var/www/panel:ro
       - ./angie.conf:/etc/angie/angie.conf:ro
       - angie-logs:/var/log/angie:rw
-      - letsencrypt:/etc/letsencrypt:rw
+      - ./letsencrypt:/etc/letsencrypt:rw
     ports:
       - "80:80"
       - "443:443"
@@ -97,7 +97,6 @@ services:
 volumes:
   pg-data:
   angie-logs:
-  letsencrypt:
 
 networks:
   mgmt:

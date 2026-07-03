@@ -71,3 +71,4 @@ Create an interactive deploy script and Docker Compose for the management server
 - 2026-07-03 opencode-executor: started
 - 2026-07-03 opencode-executor: in_review; shellcheck clean; validate_docs OK; all 7 AC met
 - 2026-07-03 executor: fix F-H1 (path resolution), F-H2 (tmpfs venv), F-H3 (certbot config dir)
+- 2026-07-03 executor: fix F-H4 (letsencrypt bind mount)
