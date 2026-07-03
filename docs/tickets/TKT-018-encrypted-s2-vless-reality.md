@@ -1,7 +1,7 @@
 ---
 id: TKT-018
 type: ticket
-status: draft
+status: in_review
 arch_ref: ARCH-001@0.2.0
 depends_on: [TKT-015@0.2.0]
 estimate: L
