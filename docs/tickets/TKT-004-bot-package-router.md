@@ -1,7 +1,7 @@
 ---
 id: TKT-004
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-002@0.1.0, TKT-003@0.1.0]
 estimate: M
@@ -79,3 +79,5 @@ Implement the embeddable aiogram Router that handles the "Get Proxy" user flow: 
 
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 architect: patched per RV-ARCH-001 findings M1 (QR code generation restored), M6 (R18 extension point tier_service AC added).
+- 2026-07-03 opencode-executor: started
+- 2026-07-03 opencode-executor: in_review; tests 53 pass (1 skip); lint clean; typecheck clean; coverage 100%
