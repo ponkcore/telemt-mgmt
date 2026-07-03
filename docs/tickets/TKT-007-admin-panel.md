@@ -1,7 +1,7 @@
 ---
 id: TKT-007
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-005@0.1.0]
 estimate: L
@@ -85,3 +85,4 @@ Implement the admin web panel as a React + TypeScript SPA consuming the FastAPI 
 
 - 2026-07-02 architect: ticket created.
 - 2026-07-02 architect: patched per RV-ARCH-001 finding L3 (@MTProxybot promotion card added to dashboard for M6 attribution).
+- 2026-07-03 executor: implemented all §5 Outputs. AC1-AC10 met. tsc/eslint/build/validate_docs all green. PR opened.
