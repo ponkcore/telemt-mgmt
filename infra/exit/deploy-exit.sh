@@ -4,8 +4,9 @@
 #
 # Installs telemt (MTProto/FakeTLS proxy on :8443), Xray-exit (VLESS-Reality
 # inbound on :443, terminates encrypted S2 tunnel from entry server), and
-# Angie (mask host on :8080) via Docker Compose. Configures firewall rules,
-# generates config.toml and xray-config.json from operator inputs.
+# Angie (mask host on :8080, or TLS server on :443 for self-steal) via Docker
+# Compose. Configures firewall rules, generates config.toml and xray-config.json
+# from operator inputs.
 #
 # Per ADR-009@0.2.0 / ARCH-001@0.2.0 §3 C7:
 #   - Xray-exit generates its own X25519 keypair and VLESS UUID
@@ -13,10 +14,19 @@
 #     deploy-entry.sh on the entry server
 #   - telemt moves from :443 to :8443 (Xray owns :443 on exit)
 #
+# Per ADR-010@0.2.0 (self-steal domain support):
+#   - If TLS_DOMAIN is not in the known third-party list, it is treated as a
+#     self-steal domain (operator's own domain with DNS pointing to this server)
+#   - Self-steal mode: mask_port=443, Angie serves TLS cert on :443 via
+#     angie-selsteal.conf.template, Let's Encrypt cert obtained via certbot
+#   - Third-party mode (default): mask_port=8080, Angie serves mask host only
+#   - Default third-party domain changed from github.com to www.microsoft.com
+#
 # Prompts for:
 #   DOMAIN          — exit server domain (e.g. proxy.example.com)
 #   AD_TAG          — Telegram ad_tag from @MTProxybot
-#   TLS_DOMAIN      — FakeTLS camouflage domain (recommended: github.com)
+#   TLS_DOMAIN      — FakeTLS camouflage domain (default: www.microsoft.com,
+#                     or operator's self-steal domain for production)
 #   TELEMT_SECRET   — telemt secret (auto-generate option)
 #   MANAGEMENT_IPS  — IPs allowed to access :9091 API
 #   MONITORING_IPS  — IPs allowed to access :9090 Prometheus metrics
@@ -28,6 +38,7 @@
 #   EXIT_REALITY_SNI         — SNI for exit Reality (default: www.microsoft.com)
 #   EXIT_REALITY_SHORT_IDS   — Comma-separated short IDs for exit Reality
 #   AUTH_HEADER              — telemt API auth header
+#   SELF_STEAL_DOMAIN        — set to TLS_DOMAIN when it's a self-steal domain
 #
 # Idempotent: on re-run, reads existing .env and skips prompts (INV-IDEMPOTENT).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -60,9 +71,25 @@ CONFIG_TEMPLATE="$SCRIPT_DIR/config.toml.template"
 CONFIG_DIR="$SCRIPT_DIR/config"
 CONFIG_FILE="$CONFIG_DIR/config.toml"
 ANGIE_TEMPLATE="$SCRIPT_DIR/angie.conf.template"
+ANGIE_SELSTEAL_TEMPLATE="$SCRIPT_DIR/angie-selsteal.conf.template"
 ANGIE_CONF="$SCRIPT_DIR/angie.conf"
 XRAY_TEMPLATE="$SCRIPT_DIR/xray-config.json.template"
 XRAY_CONFIG="$SCRIPT_DIR/xray-config.json"
+
+# ── Known third-party domains (AC2) ─────────────────────────────────────────
+# If TLS_DOMAIN is NOT in this list, it is treated as a self-steal domain.
+# Based on TELEMT_FAKETLS_DOMAIN_RESEARCH_2026.md §2 top-10 FakeTLS candidates.
+KNOWN_THIRD_PARTY_DOMAINS=(
+    "www.microsoft.com"
+    "www.apple.com"
+    "dl.google.com"
+    "storage.googleapis.com"
+    "github.com"
+    "www.twitch.tv"
+    "www.netflix.com"
+    "www.google.com"
+    "registry.npmjs.org"
+)
 
 # ── Pre-flight ──────────────────────────────────────────────────────────────
 check_docker
@@ -88,11 +115,148 @@ save_env_var "$ENV_FILE" "DOMAIN" "$DOMAIN"
 AD_TAG="$(prompt_for "AD_TAG" "Enter ad_tag from @MTProxybot (32-char hex)")"
 save_env_var "$ENV_FILE" "AD_TAG" "$AD_TAG"
 
-# TLS_DOMAIN — FakeTLS camouflage domain (with recommendations)
+# TLS_DOMAIN — FakeTLS camouflage domain (AC1: default is www.microsoft.com)
+# The default changed from github.com to www.microsoft.com per ADR-010@0.2.0:
+# www.microsoft.com has no ASN mismatch risk that github.com carries (Azure vs
+# Hetzner), and is a high-traffic stable TLS 1.3 domain.
+# Operators can enter their own domain for self-steal (AC2).
 TLS_DOMAIN="$(prompt_for "TLS_DOMAIN" \
-    "Enter FakeTLS domain (recommended: github.com primary, www.microsoft.com backup)" \
-    "github.com")"
+    "Enter FakeTLS domain (default: www.microsoft.com, or your own domain for self-steal)" \
+    "www.microsoft.com")"
 save_env_var "$ENV_FILE" "TLS_DOMAIN" "$TLS_DOMAIN"
+
+# ── Self-steal domain detection (AC2) ───────────────────────────────────────
+# Check if TLS_DOMAIN is in the known third-party list. If NOT, treat it as a
+# self-steal domain (operator's own domain with DNS A-record → this server).
+SELF_STEAL_DOMAIN=""
+_is_third_party=0
+for _known in "${KNOWN_THIRD_PARTY_DOMAINS[@]}"; do
+    if [[ "$TLS_DOMAIN" == "$_known" ]]; then
+        _is_third_party=1
+        break
+    fi
+done
+
+if [[ $_is_third_party -eq 0 ]]; then
+    # TLS_DOMAIN is not in the known third-party list → self-steal domain.
+    SELF_STEAL_DOMAIN="$TLS_DOMAIN"
+    export SELF_STEAL_DOMAIN
+    save_env_var "$ENV_FILE" "SELF_STEAL_DOMAIN" "$SELF_STEAL_DOMAIN"
+    echo ""
+    echo "  ✓ Self-steal domain detected: $SELF_STEAL_DOMAIN"
+    echo "    (not in known third-party list — treating as operator-owned domain)"
+    echo "    Self-steal eliminates ASN mismatch (ADR-010@0.2.0)."
+
+    # ── DNS verification prompt (AC3) ───────────────────────────────────────
+    # Before proceeding with cert acquisition, verify the operator has
+    # configured the DNS A-record pointing to this server. certbot HTTP-01
+    # challenge requires the domain to resolve to this server's IP.
+    echo ""
+    echo "  ⚠  DNS A-record requirement:"
+    echo "    $SELF_STEAL_DOMAIN must have an A-record pointing to THIS server's IP."
+    echo "    Configure it at your DNS provider (Cloudflare recommended, TTL=300)."
+    echo "    The A-record must be DNS-only (grey cloud, not proxied) for certbot."
+
+    _dns_verified=""
+    while true; do
+        printf "Have you configured DNS A-record for %s pointing to this server? (yes/no): " "$SELF_STEAL_DOMAIN"
+        read -r _dns_verified
+        _dns_verified="${_dns_verified,,}"
+        if [[ "$_dns_verified" == "yes" || "$_dns_verified" == "y" ]]; then
+            echo "  ✓ DNS verified by operator. Proceeding with cert acquisition."
+            break
+        elif [[ "$_dns_verified" == "no" || "$_dns_verified" == "n" ]]; then
+            echo "  ✗ DNS A-record not configured. Self-steal requires DNS to be set up."
+            echo "    Please configure the A-record at your DNS provider and re-run."
+            echo "    Alternatively, use a third-party domain (www.microsoft.com)."
+            exit 1
+        else
+            echo "  Please answer 'yes' or 'no'."
+        fi
+    done
+
+    # ── Let's Encrypt cert acquisition (§7 Constraints) ────────────────────
+    # Obtain TLS certificate via certbot for the self-steal domain.
+    # certbot uses HTTP-01 challenge: the domain must resolve to this server.
+    # The cert is stored at /etc/letsencrypt/live/<domain>/.
+    TLS_CERT_PATH="/etc/letsencrypt/live/${SELF_STEAL_DOMAIN}/fullchain.pem"
+    TLS_KEY_PATH="/etc/letsencrypt/live/${SELF_STEAL_DOMAIN}/privkey.pem"
+
+    if [[ -f "$TLS_CERT_PATH" && -f "$TLS_KEY_PATH" ]]; then
+        echo "  ✓ Let's Encrypt cert already exists for $SELF_STEAL_DOMAIN"
+        echo "    Cert: $TLS_CERT_PATH"
+    else
+        echo ""
+        echo "  → Acquiring Let's Encrypt certificate for $SELF_STEAL_DOMAIN..."
+        echo "    (certbot standalone HTTP-01 challenge — port 80 must be free)"
+
+        # Install certbot if not present.
+        if ! command -v certbot &>/dev/null; then
+            echo "    Installing certbot..."
+            sudo apt-get update -qq && sudo apt-get install -y -qq certbot
+        fi
+
+        # Stop any service on port 80 (certbot standalone needs it).
+        sudo docker stop telemt-mask 2>/dev/null || true
+        sudo systemctl stop nginx 2>/dev/null || true
+        sudo systemctl stop angie 2>/dev/null || true
+
+        # Run certbot certonly (standalone, non-interactive with --agree-tos).
+        sudo certbot certonly --standalone \
+            -d "$SELF_STEAL_DOMAIN" \
+            --non-interactive \
+            --agree-tos \
+            --register-unsafely-without-email \
+            --keep-until-expiring
+
+        if [[ -f "$TLS_CERT_PATH" && -f "$TLS_KEY_PATH" ]]; then
+            echo "  ✓ Let's Encrypt certificate acquired successfully."
+            echo "    Cert: $TLS_CERT_PATH"
+            echo "    Key:  $TLS_KEY_PATH"
+            echo ""
+            echo "  ⚠  Cert renewal is NOT automated. Add a cron job:"
+            echo "    0 3 * * * certbot renew && docker restart telemt-mask"
+            echo "    (Renewal runs daily at 3am; cert renews at 30 days before expiry)"
+        else
+            echo "  ✗ ERROR: certbot did not produce expected cert files." >&2
+            echo "    Check that DNS A-record for $SELF_STEAL_DOMAIN resolves to this server." >&2
+            echo "    You can re-run this script after fixing DNS." >&2
+            exit 1
+        fi
+    fi
+
+    # Save cert paths for reference.
+    save_env_var "$ENV_FILE" "TLS_CERT_PATH" "$TLS_CERT_PATH"
+    save_env_var "$ENV_FILE" "TLS_KEY_PATH" "$TLS_KEY_PATH"
+
+    # Set mask_host and mask_port for self-steal mode (AC5).
+    MASK_HOST="$SELF_STEAL_DOMAIN"
+    MASK_PORT=443
+
+    # Warn about port conflict if Xray-exit is also on :443.
+    echo ""
+    echo "  ⚠  Port conflict warning:"
+    echo "    Self-steal mode uses Angie on :443 for TLS cert serving."
+    echo "    Xray-exit (encrypted S2, ADR-009@0.2.0) also uses :443."
+    echo "    If both are active, use SNI routing (angie-sni-router.conf.template)"
+    echo "    or skip self-steal and use a third-party domain instead."
+    echo "    See angie-selsteal.conf.template header for details."
+else
+    # Third-party mode (default).
+    # Clear SELF_STEAL_DOMAIN if it was previously set (operator switched back).
+    if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
+        echo "  ℹ  TLS_DOMAIN is a known third-party domain. Clearing previous self-steal config."
+        # Remove SELF_STEAL_DOMAIN from .env file.
+        sed -i '/^SELF_STEAL_DOMAIN=/d' "$ENV_FILE" 2>/dev/null || true
+        unset SELF_STEAL_DOMAIN || true
+    fi
+
+    # Set mask_host and mask_port for third-party mode (AC6).
+    MASK_HOST="$TLS_DOMAIN"
+    MASK_PORT=8080
+fi
+export MASK_HOST
+export MASK_PORT
 
 # TELEMT_SECRET — auto-generate option
 # Check if already set from .env (re-run detection — INV-IDEMPOTENT).
@@ -288,15 +452,20 @@ if [[ -n "$MANAGEMENT_IPS_TOML" ]]; then
 fi
 MANAGEMENT_IPS_TOML+="\"127.0.0.1/32\", \"::1/128\""
 
+# Substitute placeholders including mask_host and mask_port (AC5/AC6).
 sed \
     -e "s|__AD_TAG__|${AD_TAG}|g" \
     -e "s|__TELEMT_SECRET__|${TELEMT_SECRET}|g" \
     -e "s|__TLS_DOMAIN__|${TLS_DOMAIN}|g" \
     -e "s|__AUTH_HEADER__|${AUTH_HEADER}|g" \
     -e "s|__MANAGEMENT_IPS__|${MANAGEMENT_IPS_TOML}|g" \
+    -e "s|__MASK_HOST__|${MASK_HOST}|g" \
+    -e "s|__MASK_PORT__|${MASK_PORT}|g" \
     "$CONFIG_TEMPLATE" > "$CONFIG_FILE"
 
 echo "✓ Generated $CONFIG_FILE"
+echo "  mask_host: $MASK_HOST"
+echo "  mask_port: $MASK_PORT"
 
 # ── Generate xray-config.json from template (AC13) ──────────────────────────
 echo "→ Generating xray-config.json from template..."
@@ -315,8 +484,24 @@ echo "✓ Generated $XRAY_CONFIG"
 
 # ── Generate Angie config from template ──────────────────────────────────────
 echo "→ Generating Angie configuration..."
-cp "$ANGIE_TEMPLATE" "$ANGIE_CONF"
-echo "✓ Generated $ANGIE_CONF"
+
+if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
+    # Self-steal mode: use the self-steal template with TLS server block (AC4).
+    if [[ ! -f "$ANGIE_SELSTEAL_TEMPLATE" ]]; then
+        echo "ERROR: angie-selsteal.conf.template not found at $ANGIE_SELSTEAL_TEMPLATE" >&2
+        exit 1
+    fi
+    sed \
+        -e "s|__TLS_DOMAIN__|${SELF_STEAL_DOMAIN}|g" \
+        -e "s|__TLS_CERT_PATH__|${TLS_CERT_PATH}|g" \
+        -e "s|__TLS_KEY_PATH__|${TLS_KEY_PATH}|g" \
+        "$ANGIE_SELSTEAL_TEMPLATE" > "$ANGIE_CONF"
+    echo "✓ Generated $ANGIE_CONF (self-steal mode — TLS on :443 for $SELF_STEAL_DOMAIN)"
+else
+    # Third-party mode: use the default mask-host-only template.
+    cp "$ANGIE_TEMPLATE" "$ANGIE_CONF"
+    echo "✓ Generated $ANGIE_CONF (third-party mode — mask host on :8080 only)"
+fi
 
 # ── System limits (ulimit) ───────────────────────────────────────────────────
 echo "→ Setting file descriptor limit (ulimit -n 65536)..."
@@ -331,10 +516,16 @@ if command -v ufw &>/dev/null; then
     sudo ufw allow ssh 2>/dev/null || true
 
     # Allow :443/tcp for Xray-exit VLESS-Reality inbound (from entry server).
+    # In self-steal mode, :443 is also used by Angie for TLS cert serving.
     sudo ufw allow 443/tcp 2>/dev/null || true
 
     # Allow :8080/tcp for Angie mask host.
     sudo ufw allow 8080/tcp 2>/dev/null || true
+
+    # Allow :80/tcp for certbot HTTP-01 challenge (self-steal mode only).
+    if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
+        sudo ufw allow 80/tcp 2>/dev/null || true
+    fi
 
     # Restrict :9090 (Prometheus metrics) to monitoring IPs only.
     if [[ -n "$MONITORING_IPS" ]]; then
@@ -385,8 +576,17 @@ echo "║  ✓ Exit server deployed successfully!                          ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo "  Domain:          $DOMAIN"
 echo "  TLS domain:      $TLS_DOMAIN"
+if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
+    echo "  Mode:            self-steal (operator-owned domain)"
+    echo "  Mask host:       https://$SELF_STEAL_DOMAIN (TLS on :443)"
+    echo "  Mask port:       443"
+    echo "  TLS cert:        $TLS_CERT_PATH"
+else
+    echo "  Mode:            third-party (default)"
+    echo "  Mask host:       http://$DOMAIN:8080"
+    echo "  Mask port:       8080"
+fi
 echo "  ad_tag:          $AD_TAG"
-echo "  Mask host:       http://$DOMAIN:8080"
 echo "  Encrypted S2:    VLESS-Reality inbound on :443 (from entry server)"
 echo "  telemt port:     :8443 (internal, forwarded from Xray-exit)"
 echo ""
@@ -400,6 +600,12 @@ echo "  ── Next steps ──────────────────
 echo "  ad_tag configured. Verify promotion at @MTProxybot /myproxies"
 echo "  to confirm your proxy is being promoted in Telegram."
 echo "  Run deploy-entry.sh on the entry server with the values above."
+if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
+    echo ""
+    echo "  ── Self-steal cert renewal ────────────────────────────────────"
+    echo "  Cert renewal is NOT automated. Add a cron job:"
+    echo "    0 3 * * * certbot renew && docker restart telemt-mask"
+fi
 echo ""
 echo "  Re-run this script to update configuration (idempotent)."
 echo ""
