@@ -78,9 +78,10 @@ save_env_var "$ENV_FILE" "REALITY_SNI" "$REALITY_SNI"
 # Idempotent: if already set in .env (including empty), re-run skips the prompt.
 # When empty, serverNames contains only the primary SNI.
 # When set (e.g. ya.ru), serverNames contains both primary and secondary.
-REALITY_SNI_SECONDARY="${REALITY_SNI_SECONDARY:-}"
-if [[ -n "${REALITY_SNI_SECONDARY:-}" ]]; then
-    echo "✓ REALITY_SNI_SECONDARY already set (from .env): ${REALITY_SNI_SECONDARY}"
+# Check if key exists in .env (handles empty values correctly for idempotency)
+if grep -q "^REALITY_SNI_SECONDARY=" "$ENV_FILE" 2>/dev/null; then
+    REALITY_SNI_SECONDARY="${REALITY_SNI_SECONDARY:-}"
+    echo "✓ REALITY_SNI_SECONDARY already set (from .env): ${REALITY_SNI_SECONDARY:-<not set>}"
 else
     printf "Enter optional secondary Reality SNI (e.g. ya.ru, leave empty to skip): "
     read -r REALITY_SNI_SECONDARY
