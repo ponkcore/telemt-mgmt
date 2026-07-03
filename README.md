@@ -107,6 +107,38 @@ bash infra/landing/deploy-landing.sh
 - ad_tag from @MTProxybot (requires public channel)
 - Cloudflare API token (for migration script)
 
+### Russian Entry Server Provider Selection
+
+The entry server must be hosted in Russia (Russian ASN, Russian A-record for the
+Reality SNI). However, not all Russian datacenter providers are equal: the June 2026
+TSPU "Siberian" behavioral module flags certain hosting provider subnets as
+**Signal 1** (suspicious server subnet). When Signal 1 is active, the operator must
+keep Signals 2 (TLS fingerprint) and 3 (connection burst) clean to avoid a
+120-second connection freeze — and the freeze doubles to 600 seconds if the client
+rotates its TLS fingerprint during the event.
+
+#### Provider comparison
+
+| Provider | Signal 1 Status | Notes |
+|---|---|---|
+| **Beget** | Not flagged | Recommended. Russian hosting, not on the TSPU flagged subnet list. |
+| **TimeWeb** | Not flagged | Recommended. Russian hosting, not on the TSPU flagged subnet list. |
+| **reg.ru** | Not flagged | Recommended. Russian hosting, not on the TSPU flagged subnet list. |
+| **Selectel** | **Flagged (Signal 1)** | Avoid for entry servers. Subnet explicitly flagged by the June 2026 Siberian module. Signal 1 is always active regardless of SNI choice. |
+| **Yandex.Cloud** | **Flagged (Signal 1)** | Avoid for entry servers. Subnet explicitly flagged by the June 2026 Siberian module. Signal 1 is always active regardless of SNI choice. |
+
+> **What is Signal 1?** The June 2026 TSPU behavioral module triggers a
+> 120-second connection freeze when three signals coincide (logical AND):
+> Signal 1 (suspicious server subnet), Signal 2 (suspicious TLS fingerprint —
+> Chrome is highly suspicious post-June 2026), and Signal 3 (more than 3 parallel
+> TLS handshakes to the same SNI within 60 seconds with inter-connection delays
+> under 350–400 ms). On a flagged subnet (Signal 1 active), the operator must keep
+> Signals 2 and 3 clean — use the `firefox` fingerprint and keep connection
+> parallelism under 3.
+>
+> **Reference:** [TELEMT_FAKETLS_DOMAIN_RESEARCH_2026.md](docs/knowledge/TELEMT_FAKETLS_DOMAIN_RESEARCH_2026.md)
+> §1 (Selectel/Yandex.Cloud flag note) and §6 (Siberian behavioral module).
+
 ## Shared-server deployment (optional)
 
 By default, telemt owns port 443 exclusively on the exit server (**standalone
