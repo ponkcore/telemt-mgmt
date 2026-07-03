@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# alert-rules.yml — 10 Prometheus alerting rules for telemt health monitoring.
+#
+# Based on: docs/knowledge/TELEMT_DEEP_GAPS_VERIFICATION_REPORT.md §Task 7
+# (Alerting Rules, 10 Total).
+#
+# Alert taxonomy:
+#   critical = proxy/API down — needs immediate operator attention
+#   warning  = degraded health — investigate when convenient
+# ─────────────────────────────────────────────────────────────────────────────
+
+groups:
+  - name: telemt_alerts
+    interval: 30s
+    rules:
+      # 1. TelemtProxyDown (critical) — proxy down >1m
+      - alert: TelemtProxyDown
+        expr: up{job="telemt"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Telemt proxy is down"
+          description: "Telemt proxy at {{ $labels.instance }} has been down for more than 1 minute."
+
+      # 2. TelemtNoActiveUsers (warning) — no users >30m (DPI blocking indicator)
+      - alert: TelemtNoActiveUsers
+        expr: telemt_connections_current == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No active telemt users for 30 minutes"
+          description: "Zero active connections for over 30 minutes — possible DPI blocking or service issue."
+
+      # 3. TelemtHighBadConnectionRatio (warning) — bad ratio >10% (DPI interference)
+      - alert: TelemtHighBadConnectionRatio
+        expr: >
+          (sum(rate(telemt_connections_bad_total[5m])) /
+           clamp_min(sum(rate(telemt_connections_total[5m])), 1)) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High bad connection ratio (>10%)"
+          description: "Bad connection ratio exceeds 10% — likely DPI interference on the proxy."
+
+      # 4. TelemtUserSharingDetected (warning) — unique IPs >3 (credential sharing)
+      - alert: TelemtUserSharingDetected
+        expr: max(telemt_user_unique_ips_current) > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "User sharing detected (unique IPs >3)"
+          description: "A user has more than 3 unique IPs — possible credential sharing."
+
+      # 5. TelemtUserQuotaExceeded (warning) — quota exceeded
+      - alert: TelemtUserQuotaExceeded
+        expr: telemt_user_quota_exceeded > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "User quota exceeded"
+          description: "One or more users have exceeded their traffic quota."
+
+      # 6. TelemtApiDown (critical) — API down >2m
+      - alert: TelemtApiDown
+        expr: telemt_api_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Telemt API is down"
+          description: "Telemt API on :9091 has been down for more than 2 minutes."
+
+      # 7. TelemtTLSFingerprintAnomaly (warning) — new JA4 pattern (new DPI rule)
+      - alert: TelemtTLSFingerprintAnomaly
+        expr: >
+          increase(telemt_tls_fingerprint_new_patterns_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "New TLS fingerprint pattern detected"
+          description: "New JA4 fingerprint pattern detected — possible new DPI classification rule."
+
+      # 8. TelemtHighLatencyToDC (warning) — p95 latency >2s
+      - alert: TelemtHighLatencyToDC
+        expr: histogram_quantile(0.95, rate(telemt_dc_latency_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency to Telegram DC (p95 >2s)"
+          description: "P95 latency to Telegram data centers exceeds 2 seconds."
+
+      # 9. TelemtDiskSpaceLow (warning) — disk <10%
+      - alert: TelemtDiskSpaceLow
+        expr: >
+          (1 - node_filesystem_avail_bytes{mountpoint="/"} /
+           node_filesystem_size_bytes{mountpoint="/"}) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low (<10% free)"
+          description: "Disk space on {{ $labels.instance }} is below 10% free."
+
+      # 10. TelemtCertFetchFailures (warning) — cert fetch failures (TLS fronting degraded)
+      - alert: TelemtCertFetchFailures
+        expr: increase(telemt_cert_fetch_failures_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate fetch failures detected"
+          description: "More than 5 certificate fetch failures in 10 minutes — TLS fronting may be degraded."
