@@ -24,10 +24,10 @@ which has implications:
 
 ## Why deferred (now in progress)
 
-PRD-1 is complete. Addressing now: shell.nix added, project.jsonc commands wrapped in
+PRD-001@0.3.0 is complete. Addressing now: shell.nix added, project.jsonc commands wrapped in
 `nix-shell --run`, environment block added, AGENTS.md updated.
 
-## Suggested resolution (post-PRD-1)
+## Suggested resolution (post-PRD-001@0.3.0)
 
 1. ✅ Add `environment` block to `project.jsonc` (dev_os, dev_shell, fhs, note).
 2. ✅ Add `shell.nix` to repo root (uv, nodejs_22, python312, LD_LIBRARY_PATH).

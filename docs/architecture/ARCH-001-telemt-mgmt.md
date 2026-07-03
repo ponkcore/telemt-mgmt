@@ -1,11 +1,11 @@
 ---
 id: ARCH-001
 type: arch_spec
-status: approved
-version: 0.1.2
+status: draft
+version: 0.2.0
 prd_ref: PRD-001@0.3.0
-adrs: [ADR-001@0.1.2, ADR-002@0.1.0, ADR-003@0.1.1, ADR-004@0.1.1, ADR-005@0.1.0, ADR-006@0.1.0, ADR-007@0.1.0]
-tickets: [TKT-001@0.1.1, TKT-002@0.1.0, TKT-003@0.1.0, TKT-004@0.1.1, TKT-005@0.1.0, TKT-006@0.1.0, TKT-007@0.1.1, TKT-008@0.1.1, TKT-009@0.1.1, TKT-010@0.1.0, TKT-011@0.1.1, TKT-012@0.1.0, TKT-013@0.1.1]
+adrs: [ADR-001@0.1.2, ADR-002@0.1.0, ADR-003@0.1.1, ADR-004@0.1.1, ADR-005@0.1.0, ADR-006@0.1.0, ADR-007@0.1.0, ADR-008@0.2.0, ADR-009@0.2.0, ADR-010@0.2.0]
+tickets: [TKT-001@0.1.1, TKT-002@0.1.0, TKT-003@0.1.0, TKT-004@0.1.1, TKT-005@0.1.0, TKT-006@0.1.0, TKT-007@0.1.1, TKT-008@0.1.1, TKT-009@0.1.1, TKT-010@0.1.0, TKT-011@0.1.1, TKT-012@0.1.0, TKT-013@0.1.1, TKT-014@0.2.0, TKT-015@0.2.0, TKT-016@0.2.0, TKT-017@0.2.0, TKT-018@0.2.0, TKT-019@0.2.0]
 created: 2026-07-02
 ---
 
@@ -20,6 +20,8 @@ created: 2026-07-02
   - `docs/knowledge/TELEMT_DEPLOYMENT_SECURITY_MONITORING_REPORT.md` — full telemt code structure, security audit (API, crypto, Docker, systemd), double-hop configs, panel comparison, ad_tag mechanism, monitoring stack, deploy scenarios, production runbooks.
   - `docs/knowledge/TELEMT_FAKETLS_DOMAIN_SELECTION_REPORT.md` — FakeTLS domain selection for DPI evasion, TSPU threat model (7 detection vectors), ASN mismatch analysis, double-hop architecture analysis, rotation strategy, domain recommendations.
   - `docs/knowledge/TELEMT_GITHUB_ECOSYSTEM_CATALOG.md` — 100+ projects across 15 categories: server implementations, panels, bots, client libraries, DPI tools, monitoring, billing, installers, proxy chains, secrets management, forks.
+  - `docs/knowledge/TELEMT_TSPU_EVASION_PATTERNS.md` — production-proven TSPU evasion patterns for double-hop: Russian Reality SNI, PROXYv1, encrypted S2, Angie SNI routing, RU datacenter selection, XHTTP paths. Field-validated July 2026.
+  - `docs/knowledge/TELEMT_FAKETLS_DOMAIN_RESEARCH_2026.md` — path-dependent TSPU evasion strategy (S1/S2/S3 segments), top-10 Reality SNI candidates with production validation, self-steal domain implementation guide, PROXY protocol decision matrix, encrypted S2 architecture with full Xray configs, TSPU detection evolution (April + June 2026 waves, Siberian behavioral module), telemt 3.4.22 feature compatibility, operational runbook.
 
 - **Reuse / fork candidates evaluated:**
 
@@ -39,7 +41,7 @@ created: 2026-07-02
 
 ## §1 Overview
 
-This spec designs a management layer for the telemt MTProxy server, consisting of six components: (C1) an embeddable Python package that exposes an aiogram Router for proxy-link distribution, (C2) a standalone Telegram bot reference implementation, (C3) a FastAPI admin API with JWT auth, (C4) a React+TypeScript admin web panel, (C5) infrastructure-as-code with five independent deploy scripts, and (C6) a static one-pager landing page. The architecture targets four independent deploy targets (entry server, exit server, management server, monitoring server) plus a standalone one-pager on any server. telemt 3.4.22 is treated as an external service accessed via its REST API (:9091); this project does not modify or fork telemt.
+This spec designs a management layer for the telemt MTProxy server, consisting of seven components: (C1) an embeddable Python package that exposes an aiogram Router for proxy-link distribution, (C2) a standalone Telegram bot reference implementation, (C3) a FastAPI admin API with JWT auth, (C4) a React+TypeScript admin web panel, (C5) infrastructure-as-code with five independent deploy scripts, (C6) a static one-pager landing page, and (C7) an Xray exit relay for encrypted entry-to-exit segment via VLESS-Reality. The architecture targets four independent deploy targets (entry server, exit server, management server, monitoring server) plus a standalone one-pager on any server. telemt 3.4.22 is treated as an external service accessed via its REST API (:9091); this project does not modify or fork telemt.
 
 ## §2 Goal Coverage
 
@@ -144,6 +146,17 @@ This spec designs a management layer for the telemt MTProxy server, consisting o
   - Responsive, works on mobile.
 - **Depends on:** Angie (for serving). No backend dependency.
 - **Relevant ADRs:** ADR-007@0.1.0.
+
+### C7 — Xray Exit Relay (encrypted S2 termination)
+
+- **Responsibility:** Terminate the encrypted VLESS-Reality tunnel from the entry server on :443 and forward decrypted MTProto traffic to telemt on localhost:8443 via a `freedom` outbound. Presents a VLESS-Reality handshake with configurable SNI to TSPU on the RU→EU international link. Client IP is preserved: the entry server's `xver:1` prepends a PROXYv1 header to the data stream inside the VLESS tunnel; C7 forwards this header as-is to telemt.
+- **Interface / contract:**
+  - Listens on `0.0.0.0:443` (VLESS-Reality inbound, accepts connections from entry server only by UUID authentication)
+  - Forwards decrypted traffic to `127.0.0.1:8443` (telemt, internal)
+  - Requires: EXIT_VLESS_UUID (shared with entry server), EXIT_REALITY_PRIVATE_KEY, EXIT_REALITY_SNI, EXIT_SHORT_IDS
+  - Error modes: connection refused if telemt is not listening on :8443; Reality handshake failure if UUID/keys mismatch
+- **Depends on:** telemt (localhost:8443), Docker (Xray container)
+- **Relevant ADRs:** ADR-009@0.2.0
 
 ## §4 Data & Interfaces
 
@@ -283,6 +296,22 @@ graph TD
 
 Concurrency cap = 3 (from `project.jsonc`). Waves 2 and 3 will be capped at 3 parallel executors.
 
+### TSPU Evasion Wave (Wave 6, after PRD-001@0.3.0 initial delivery)
+
+**Wave 6a** (no dependencies on each other, disjoint outputs):
+- TKT-014@0.2.0: Russian Reality SNI — outputs: `infra/entry/xray-config.json.template` (inbound), `infra/entry/deploy-entry.sh` (SNI section)
+- TKT-016@0.2.0: Angie SNI routing — outputs: `infra/exit/angie-sni-router.conf.template` (new), `README.md` (SNI section)
+
+**Wave 6b** (depends on TKT-014@0.2.0):
+- TKT-015@0.2.0: PROXYv1 + port fix — outputs: `infra/entry/xray-config.json.template` (outbound), `infra/exit/config.toml.template` (proxy settings)
+
+**Wave 6c** (depends on TKT-015@0.2.0):
+- TKT-018@0.2.0: Encrypted S2 — outputs: `infra/entry/xray-config.json.template` (full replace), `infra/exit/xray-config.json.template` (new), `infra/exit/docker-compose.yml`, `infra/exit/config.toml.template` (port), `infra/entry/deploy-entry.sh` (exit prompts), `infra/exit/deploy-exit.sh` (Xray setup)
+
+**Wave 6d** (depends on TKT-018@0.2.0):
+- TKT-017@0.2.0: RU datacenter guidance — outputs: `infra/entry/deploy-entry.sh` (banner text), `README.md` (provider section)
+- TKT-019@0.2.0: Self-steal domain — outputs: `infra/exit/deploy-exit.sh` (TLS_DOMAIN), `infra/exit/angie-selsteal.conf.template` (new), `infra/exit/config.toml.template` (mask settings), `README.md` (self-steal section)
+
 ## §8 Observability
 
 ### M6 Attribution — ad_tag Promotion Tracking
@@ -340,3 +369,4 @@ All secrets are env vars. `.env.example` documents names with placeholder values
 - 2026-07-02 0.1.0 — initial draft.
 - 2026-07-02 0.1.1 — fixes from RV-ARCH-001 (10 findings resolved).
 - 2026-07-02 0.1.2 — fix create_router() signature drift (RV-ARCH-001-v2 Medium).
+- 2026-07-03 0.2.0 — TSPU evasion improvements: encrypted S2 via VLESS-Reality (ADR-009@0.2.0, C7), Russian Reality SNI (ads.x5.ru), PROXYv1, Angie SNI routing (ADR-008@0.2.0), RU datacenter guidance, self-steal domain strategy (ADR-010@0.2.0). 6 new tickets (TKT-014@0.2.0–TKT-019@0.2.0).
