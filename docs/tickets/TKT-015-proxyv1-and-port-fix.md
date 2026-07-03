@@ -1,7 +1,7 @@
 ---
 id: TKT-015
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.0
 depends_on: [TKT-014@0.2.0]
 estimate: S
@@ -58,3 +58,4 @@ Switch entry→exit PROXY protocol from v2 (binary, fingerprintable) to v1 (text
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
 - 2026-07-04 executor: started implementation of §5 Outputs (PROXYv1, port fix, exit PROXY config)
 - 2026-07-04 executor: in_review; tests pass (181 pass, 1 skip); lint clean; typecheck clean; docs-ci OK
+- 2026-07-04 opencode-orchestrator: merged in f5e08ef; RV-CODE-015-01 verdict=pass; F-L1 (Low) backlog: add inline note matching mask_proxy_protocol to entry proxyProtocol.
