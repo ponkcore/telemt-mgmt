@@ -1,7 +1,7 @@
 ---
 id: TKT-010
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.1.1
 depends_on: [TKT-006@0.1.0, TKT-007@0.1.1]
 estimate: M
@@ -72,3 +72,4 @@ Create an interactive deploy script and Docker Compose for the management server
 - 2026-07-03 opencode-executor: in_review; shellcheck clean; validate_docs OK; all 7 AC met
 - 2026-07-03 executor: fix F-H1 (path resolution), F-H2 (tmpfs venv), F-H3 (certbot config dir)
 - 2026-07-03 executor: fix F-H4 (letsencrypt bind mount)
+- 2026-07-03 opencode-orchestrator: merged in d1f93cc; RV-CODE-010 verdict=fail→pass (iter 3); F-H1/H2/H3/H4 resolved, Mediums backlogged.
