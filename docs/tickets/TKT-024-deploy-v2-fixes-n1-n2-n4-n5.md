@@ -1,7 +1,7 @@
 ---
 id: TKT-024
 type: ticket
-status: in_progress
+status: in_review
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: S
