@@ -38,7 +38,8 @@ services:
 
   # ── Frontend: built React SPA served by Angie (AC5: panel accessible) ──────
   frontend:
-    image: angie/angie:latest
+    # D1: Official Angie registry image (angie/angie:latest doesn't exist on Docker Hub).
+    image: docker.angie.software/angie:1.8.1-alpine
     container_name: telemt-mgmt-frontend
     restart: unless-stopped
     volumes:
@@ -53,7 +54,8 @@ services:
       - mgmt
     depends_on:
       - api
-    read_only: true
+    # D5: Angie needs to write to cache dirs — remove read_only.
+    # Angie entrypoint chowns cache dirs and setgids to the angie user.
     tmpfs:
       - /tmp
       - /var/cache/angie
@@ -64,6 +66,9 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # ── PostgreSQL (AC3: auto-created if DATABASE_URL not provided) ────────────
   db:

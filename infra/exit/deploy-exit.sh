@@ -19,7 +19,7 @@
 #     self-steal domain (operator's own domain with DNS pointing to this server)
 #   - Self-steal mode: mask_port=443, Angie serves TLS cert on :443 via
 #     angie-selsteal.conf.template, Let's Encrypt cert obtained via certbot
-#   - Third-party mode (default): mask_port=8080, Angie serves mask host only
+#   - Third-party mode (default): mask_port=443, tls_emulation fetches from real domain on :443
 #   - Default third-party domain changed from github.com to www.microsoft.com
 #
 # Prompts for:
@@ -59,7 +59,7 @@ trap _finish_timer EXIT
 
 # Resolve script directory (handles symlinks)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INFRA_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source shared helpers
 # shellcheck disable=SC1091
@@ -271,7 +271,7 @@ else
 
     # Set mask_host and mask_port for third-party mode (AC6).
     MASK_HOST="$TLS_DOMAIN"
-    MASK_PORT=8080
+    MASK_PORT=443
 fi
 export MASK_HOST
 export MASK_PORT
@@ -340,7 +340,7 @@ else
             EXIT_KEYPAIR=$(xray x25519)
         else
             echo "  xray binary not found locally, using Docker..."
-            EXIT_KEYPAIR=$(docker run --rm ghcr.io/xtls/xray-core:latest xray x25519)
+            EXIT_KEYPAIR=$(docker run --rm ghcr.io/xtls/xray-core:latest x25519)
         fi
         EXIT_REALITY_PRIVATE_KEY=$(echo "$EXIT_KEYPAIR" | grep -i "Private" | awk '{print $NF}')
         EXIT_REALITY_PUBLIC_KEY=$(echo "$EXIT_KEYPAIR" | grep -i "Public" | awk '{print $NF}')
@@ -384,7 +384,7 @@ else
             EXIT_VLESS_UUID=$(uuidgen)
         else
             echo "  xray and uuidgen not found, using Docker..."
-            EXIT_VLESS_UUID=$(docker run --rm ghcr.io/xtls/xray-core:latest xray uuid)
+            EXIT_VLESS_UUID=$(docker run --rm ghcr.io/xtls/xray-core:latest uuid)
         fi
         echo "✓ Generated VLESS UUID: $EXIT_VLESS_UUID"
     else
@@ -601,8 +601,8 @@ if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
     echo "  TLS cert:        $TLS_CERT_PATH"
 else
     echo "  Mode:            third-party (default)"
-    echo "  Mask host:       http://$DOMAIN:8080"
-    echo "  Mask port:       8080"
+    echo "  Mask host:       $TLS_DOMAIN (tls_emulation fetches on :443)"
+    echo "  Mask port:       443"
 fi
 echo "  ad_tag:          $AD_TAG"
 echo "  Encrypted S2:    VLESS-Reality inbound on :443 (from entry server)"

@@ -9,7 +9,7 @@
 #   __AUTH_HEADER__    — API auth header (auto-generated if empty)
 #   __MANAGEMENT_IPS__ — comma-separated CIDR list for API whitelist
 #   __MASK_HOST__      — mask host domain (self-steal: TLS_DOMAIN; third-party: TLS_DOMAIN)
-#   __MASK_PORT__      — mask host port (self-steal: 443; third-party: 8080)
+#   __MASK_PORT__      — mask host port (self-steal: 443; third-party: 443)
 #
 # Per ARCH-001 §5 invariants:
 #   INV-DOCKER  — hardened container (cap_drop ALL, read_only, no-new-privileges)
@@ -23,8 +23,10 @@
 #
 # Third-party mode (default):
 #   When using a third-party domain (www.microsoft.com, etc.), mask_port is
-#   8080 — Angie serves the mask host on :8080 (non-TLS). tls_emulation
-#   fetches the ServerHello from the third-party domain directly.
+#   443 — tls_emulation fetches the ServerHello from the real third-party
+#   domain on :443 (the standard HTTPS port). Previously this was set to
+#   8080, but third-party domains don't serve TLS on :8080, causing the
+#   tls_emulation fetch to fail.
 # ─────────────────────────────────────────────────────────────────────────────
 
 [general]
@@ -44,6 +46,9 @@ tls = true
 port = 8443
 # proxy_protocol: parse incoming PROXY header (v1 or v2, auto-detected).
 proxy_protocol = true
+# Trusted CIDRs for PROXY protocol — only accept PROXY headers from localhost
+# (Xray-exit forwards from localhost:8443). Prevents IP spoofing from external.
+proxy_protocol_trusted_cidrs = ["127.0.0.1/32"]
 # Prometheus metrics — bound to localhost, accessible via UFW-restricted port.
 metrics_port = 9090
 metrics_listen = "0.0.0.0:9090"
@@ -68,7 +73,7 @@ mask = true
 mask_host = "__MASK_HOST__"
 # mask_port: port for tls_emulation ServerHello fetch.
 # Self-steal mode: 443 (Angie serves TLS cert for the self-steal domain).
-# Third-party mode: 8080 (Angie serves mask host on non-standard port).
+# Third-party mode: 443 (fetch from the real third-party domain on standard HTTPS port).
 mask_port = __MASK_PORT__
 # unknown_sni_action: reject connections with unrecognised SNI (hardening).
 unknown_sni_action = "reject_handshake"
@@ -83,6 +88,3 @@ default_user = 20
 
 [access.user_max_unique_ips]
 default_user = 3
-
-[access.user_data_quota_bytes]
-free_user = 1073741824
