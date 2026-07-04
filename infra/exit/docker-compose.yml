@@ -29,10 +29,17 @@ services:
     volumes:
       - ./config:/etc/telemt:rw
       - telemt-data:/var/lib/telemt:rw
+      # N2 (TKT-024): healthcheck checks /app/config.toml but config is mounted
+      # at /etc/telemt/config.toml. Add a supplementary read-only mount so the
+      # healthcheck finds the config at the expected path.
+      - ./config/config.toml:/app/config.toml:ro
     env_file:
       - .env
-    # D5: telemt only writes to mounted volumes, so read_only is safe.
-    read_only: true
+    # N1 (TKT-024): telemt writes beobachten.txt and cache/ to /app (working dir),
+    # which is root-owned. Run as root and drop read_only so writes succeed.
+    # Same pattern as xray-exit. Security invariants preserved:
+    # cap_drop:[ALL], security_opt:[no-new-privileges:true], cap_add:[NET_BIND_SERVICE].
+    user: "0:0"
     tmpfs:
       - /tmp
     security_opt:

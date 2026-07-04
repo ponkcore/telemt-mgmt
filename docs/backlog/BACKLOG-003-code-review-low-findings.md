@@ -37,3 +37,8 @@ created: 2026-07-04
 
 ### L7 — README could mention landing page deploy
 - Minor documentation gap
+
+### L8 — .env.example EXIT_REALITY_SNI default stale (from RV-CODE-024-1 F-L1)
+- File: `infra/exit/.env.example`
+- Impact: `.env.example` still shows `EXIT_REALITY_SNI=www.microsoft.com` but `deploy-exit.sh` default is now `ads.x5.ru` (TKT-024@0.2.1 N4 fix).
+- Fix: Update `.env.example` to `EXIT_REALITY_SNI=ads.x5.ru` in a future doc/infra PR.
