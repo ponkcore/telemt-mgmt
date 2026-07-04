@@ -1,7 +1,7 @@
 ---
 id: TKT-020
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: M
@@ -71,3 +71,4 @@ Correct the entry server's Xray inbound from VLESS-Reality (which breaks `tg://p
 - 2026-07-04 Viktor: ticket created (emergency fix session)
 - 2026-07-04 opencode-executor: started; implementing §5 Outputs.
 - 2026-07-04 opencode-executor: in_review; tests 198 pass (1 skip); lint clean; typecheck clean; shellcheck clean; validate_docs OK (57 docs, 0 errors).
+- 2026-07-04 opencode-orchestrator: merged in eda986e; RV-CODE-020-01 verdict=pass_with_changes; F-M1 (ticket §5 Outputs incomplete) backlogged, F-L1 (dead config) noted.
