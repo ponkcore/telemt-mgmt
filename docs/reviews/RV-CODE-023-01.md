@@ -7,7 +7,7 @@ status: in_review
 created: 2026-07-04
 ---
 
-# RV-CODE-023-01: review of TKT-023 (PR #41)
+# RV-CODE-023-01: review of TKT-023@0.2.1 (PR #41)
 
 **Verdict:** pass_with_changes
 **Summary:** All 10 §6 acceptance criteria are met and shell/Python checks pass, but `docs-ci` fails on two pre-existing unversioned ticket references in `docs/reviews/` that are already fixed on `main`.
