@@ -1,7 +1,7 @@
 ---
 id: BACKLOG-002
 type: backlog
-status: completed
+status: done
 source: PO
 created: 2026-07-03
 ---
