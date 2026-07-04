@@ -18,7 +18,7 @@ Fix 5 code-level issues found by RV-CODE-FULL: H1 (blocking bcrypt/QR in async),
 - H2: Remove `"dev-secret-change-me"` default from `JWT_SECRET_KEY` in `api/deps.py`. Raise `RuntimeError` if `JWT_SECRET_KEY` is unset or empty.
 - M1: Refactor `telemt_proxy/database.py` — replace module-level `engine` and `async_session_factory` with a `create_session_factory(database_url)` function. Update `api/deps.py` and `bot/main.py` to call the factory.
 - M3: Restrict CORS `allow_methods` to `["GET", "POST", "DELETE", "OPTIONS"]` and `allow_headers` to `["Authorization", "Content-Type"]` in `api/main.py`.
-- M6: Update ARCH-001@0.2.1 §3 C1 to document all 5 fields of `ProxyConfig` (server, port, salt, auth_header, base_url), or refactor to remove redundant fields. Chosen approach: update ArchSpec (the 5-field design is intentional for standalone bot convenience).
+- M6: ArchSpec §3 C1 already updated to document all 5 fields of `ProxyConfig` (server, port, salt, auth_header, base_url). No executor action needed for this item — code already has 5 fields, ArchSpec now matches.
 
 ## §3 NOT In Scope
 - Infrastructure files (`infra/`, `scripts/`) — owned by TKT-020@0.2.1, TKT-022@0.2.1, TKT-023@0.2.1.
@@ -38,9 +38,8 @@ Fix 5 code-level issues found by RV-CODE-FULL: H1 (blocking bcrypt/QR in async),
 - `telemt_proxy/qr.py` — H1 (no change to file itself; wrapping at call site)
 - `telemt_proxy/router.py` — H1 (wrap `generate_qr()` in `asyncio.to_thread()`)
 - `telemt_proxy/database.py` — M1 (factory function)
-- `telemt_proxy/config.py` — M6 (add docstring clarification if needed)
+- `telemt_proxy/config.py` — M6 (verify 5 fields match ArchSpec, add docstring if needed)
 - `bot/main.py` — M1 (use factory function for session creation)
-- `docs/architecture/ARCH-001-telemt-mgmt.md` §3 C1 — M6 (document 5 fields)
 - `tests/test_auth.py` — update tests for async bcrypt and JWT fail-fast
 - `tests/test_database.py` — update tests for factory function
 - `tests/conftest.py` — update fixtures for factory function
@@ -51,7 +50,7 @@ Fix 5 code-level issues found by RV-CODE-FULL: H1 (blocking bcrypt/QR in async),
 - [ ] AC3 — `JWT_SECRET_KEY` has no default value. App raises `RuntimeError` at import time (or startup) if the env var is missing or empty.
 - [ ] AC4 — `telemt_proxy/database.py` has no module-level `engine` or `async_session_factory`. Only a `create_session_factory(database_url: str)` function.
 - [ ] AC5 — CORS `allow_methods` lists only `GET`, `POST`, `DELETE`, `OPTIONS`. CORS `allow_headers` lists only `Authorization`, `Content-Type`.
-- [ ] AC6 — ARCH-001@0.2.1 §3 C1 documents `ProxyConfig(server, port, salt, auth_header, base_url)`.
+- [ ] AC6 — `ProxyConfig` in `telemt_proxy/config.py` has 5 fields: `server`, `port`, `salt`, `auth_header`, `base_url` (matches ArchSpec §3 C1).
 - [ ] AC7 — All existing tests pass. New tests cover async bcrypt and JWT fail-fast.
 
 ## §7 Constraints

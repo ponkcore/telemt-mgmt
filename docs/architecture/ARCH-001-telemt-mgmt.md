@@ -1,7 +1,7 @@
 ---
 id: ARCH-001
 type: arch_spec
-status: approve
+status: approved
 version: 0.2.1
 prd_ref: PRD-001@0.3.0
 adrs:
@@ -99,7 +99,7 @@ This spec designs a management layer for the telemt MTProxy server, consisting o
 - **Responsibility:** Provide an aiogram 3.x `Router` that handles the "Get Proxy" user flow: receives a callback/command, creates a telemt user via the API, constructs a `tg://proxy` link, generates a QR code image for the link, and sends both the link and QR code to the user. Also exposes `TelemtClient` — a typed async httpx wrapper for the telemt REST API — for use by C2 and C3.
 - **Interface / contract:**
   - `telemt_proxy.router.create_router(telemt_client, db_session_factory, config, tier_service=None) -> aiogram.Router` — returns a configured Router. The optional `tier_service` parameter is the R18 extension point for future user-tier routing (not implemented in MVP; defaults to `None`). The `config` parameter is a `ProxyConfig` instance containing `server` (entry server FQDN), `port`, and `salt` (for hashing) needed to build proxy links and QR codes.
-  - `telemt_proxy.config.ProxyConfig` — dataclass with `server: str`, `port: int`, `salt: str` fields. Loaded from env vars in standalone bot, constructed by host bot for embed case.
+  - `telemt_proxy.config.ProxyConfig` — dataclass with `server: str` (entry server FQDN), `port: int`, `salt: str` (for hashing), `auth_header: str` (telemt API auth), `base_url: str` (telemt API URL). Loaded from env vars in standalone bot, constructed by host bot for embed case.
   - `telemt_proxy.client.TelemtClient(base_url, auth_header, timeout)` — async context manager; methods: `create_user(username)`, `list_users()`, `get_user(username)`, `disable_user(username)`, `enable_user(username)`, `rotate_secret(username)`, `get_stats_summary()`, `get_active_ips()`, `get_connections_summary()`.
   - `telemt_proxy.models` — SQLAlchemy 2.x async ORM models: `ProxyUser`, `LabelledLink`.
   - `telemt_proxy.link.build_proxy_link(server, port, secret) -> str` — constructs `tg://proxy?server=...&port=...&secret=...`.
@@ -163,7 +163,7 @@ This spec designs a management layer for the telemt MTProxy server, consisting o
 
 - **Responsibility:** Provide five independent deploy scripts, each deployable on a fresh Ubuntu/Debian server, plus Docker Compose files for each target. Also provides a migration script.
 - **Interface / contract:**
-  - `infra/entry/deploy-entry.sh` — Xray VLESS-Reality on Russia entry server. Prompts for: exit server IP, Reality SNI (recommendations: `vkvideo.ru`, `yahoo.com`), Reality keys (auto-generates if not provided), PROXYv2 settings. Produces: Docker Compose + Xray config.
+  - `infra/entry/deploy-entry.sh` — Xray dokodemo-door + VLESS-Reality outbound on Russia entry server. Prompts for: exit server IP, exit VLESS UUID, exit Reality public key, exit Reality SNI, exit short ID. Entry server has no Reality keys of its own — it is a transparent TCP forwarder with PROXYv1 injection. Produces: Docker Compose + Xray config.
   - `infra/exit/deploy-exit.sh` — Telemt + Angie mask host on EU exit server. Prompts for: domain, ad_tag, tls_domain (recommendations: `github.com`, `www.microsoft.com`), telemt secret (auto-generates if not provided), mask host config. Generates `config.toml` with ad_tag in `[general]` section and `use_middle_proxy = true` (required for ad_tag promotion). Produces: Docker Compose + telemt config.toml + Angie config. Outputs post-deploy message prompting operator to verify ad_tag promotion at @MTProxybot /myproxies.
   - `infra/mgmt/deploy-mgmt.sh` — Management stack on management server. Prompts for: telemt API URL + auth_header, bot token, database URL (or auto-creates PostgreSQL), panel domain, admin username + password (for JWT auth). Produces: Docker Compose + .env.
   - `infra/monitoring/deploy-monitoring.sh` — Prometheus + Grafana on monitoring server. Prompts for: telemt metrics endpoint (exit server :9090), Grafana admin password. Produces: Docker Compose + Prometheus config + Grafana provisioning.

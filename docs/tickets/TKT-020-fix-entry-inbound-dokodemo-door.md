@@ -42,7 +42,6 @@ Correct the entry server's Xray inbound from VLESS-Reality (which breaks `tg://p
 - `infra/entry/deploy-entry.sh` — **significant revision** (simplified prompts, D6/D7 fixed)
 - `infra/exit/xray-config.json.template` — **patch** (xver: 1 → 0)
 - `docs/architecture/adr/ADR-009@0.2.1-encrypted-entry-exit-vless-reality.md` — **revision** (0.2.1)
-- `docs/architecture/ARCH-001@0.2.1-telemt-mgmt.md` — **patch** (§3 C5, C7, §9, revision log, frontmatter)
 
 ## §6 Acceptance Criteria
 - [ ] AC1 — Entry inbound protocol is `dokodemo-door` (not `vless`) on :443.
