@@ -46,5 +46,5 @@ created: 2026-07-04
 - authz_isolation: JWT secret now fail-fast; no hardcoded fallback. Admin API isolation unchanged.
 - secrets: `JWT_SECRET_KEY` no longer has a public default; `api/deps.py:42-46` raises at import if missing.
 - observability: No new logging/metrics changes.
-- rollback: Revertible by reverting the single TKT-021 commit; no schema or infra changes.
+- rollback: Revertible by reverting the single TKT-021@0.2.1 commit; no schema or infra changes.
 - dns_failover: N/A — no DNS changes.
