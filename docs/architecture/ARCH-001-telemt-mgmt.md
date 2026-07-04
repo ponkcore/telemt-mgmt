@@ -400,7 +400,7 @@ All secrets are env vars. `.env.example` documents names with placeholder values
 | `ADMIN_API_KEY`          | C3              | Env var on mgmt server (initial admin setup) |
 | `TELEMT_SECRET`          | C5 (exit)       | Env var on exit server / auto-generated      |
 | `AD_TAG`                 | C5 (exit)       | Env var on exit server                       |
-| `REALITY_PRIVATE_KEY`    | C5 (entry)      | Env var on entry server / auto-generated     |
+| `EXIT_REALITY_PRIVATE_KEY` | C5 (exit)       | Env var on exit server / auto-generated      |
 | `CLOUDFLARE_API_TOKEN`   | C5 (migrate)    | Env var on mgmt server                       |
 | `GRAFANA_ADMIN_PASSWORD` | C5 (monitoring) | Env var on monitoring server                 |
 
