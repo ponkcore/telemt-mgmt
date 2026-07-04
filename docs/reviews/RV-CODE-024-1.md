@@ -1,5 +1,5 @@
 ---
-id: RV-CODE-024
+id: RV-CODE-024-1
 type: code_review
 target_pr: "https://github.com/ponkcore/telemt-mgmt/pull/44"
 ticket_ref: TKT-024@0.2.1
@@ -7,7 +7,7 @@ status: in_review
 created: 2026-07-04
 ---
 
-# RV-CODE-024-1: review of TKT-024 (PR #44)
+# RV-CODE-024-1: review of TKT-024@0.2.1 (PR #44)
 
 **Verdict:** pass_with_changes
 **Summary:** All four fixes (N1, N2, N4, N5) are correctly implemented and verified; project checks pass, but the ticket frontmatter is still `in_progress` instead of `in_review`.
@@ -33,7 +33,7 @@ created: 2026-07-04
 - none
 
 ### Medium  (fix or backlog)
-- **F-M1:** `docs/tickets/TKT-024-deploy-v2-fixes-n1-n2-n4-n5.md:4` — ticket `status: in_progress`; per pipeline gate it should be `in_review` while under review. Flip before merge.
+- **F-M1:** `docs/tickets/TKT-024-deploy-v2-fixes-n1-n2-n4-n5.md:4` — ticket `status: in_progress`; per pipeline gate it should be `in_review` while under review. (Fixed post-review: status flipped to `in_review`.)
 
 ### Low  (optional)
 - **F-L1:** `infra/exit/.env.example:64` — `EXIT_REALITY_SNI=www.microsoft.com` is now inconsistent with the script default `ads.x5.ru`. Out of this ticket's §5 Outputs, but operators copying the example may misconfigure. Backlog or fix in a follow-up doc tweak.
