@@ -35,6 +35,7 @@ R18 Extension Point:
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Protocol
 
 from aiogram import F, Router
@@ -207,7 +208,7 @@ def create_router(
         )
 
         # Step 6: Generate QR code PNG.
-        qr_png: bytes = generate_qr(proxy_link)
+        qr_png: bytes = await asyncio.to_thread(generate_qr, proxy_link)
 
         # Step 7: Send link text + QR code image.
         await message.answer(

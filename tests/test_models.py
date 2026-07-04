@@ -397,21 +397,23 @@ class TestForeignKeyRelationship:
 
 
 class TestDatabaseConfiguration:
-    """Verify database.py engine and session setup (AC4)."""
+    """Verify database.py factory function and session setup (AC4, M1)."""
 
-    def test_engine_is_async_engine(self) -> None:
-        assert isinstance(database.engine, AsyncEngine)
+    def test_no_module_level_engine(self) -> None:
+        """database.py has no module-level engine (M1, INV-EMBED)."""
+        assert not hasattr(database, "engine")
+        assert not hasattr(database, "async_session_factory")
 
-    def test_session_factory_is_async_sessionmaker(self) -> None:
-        assert isinstance(database.async_session_factory, async_sessionmaker)
+    def test_create_session_factory_returns_async_sessionmaker(self) -> None:
+        """create_session_factory returns an async_sessionmaker (M1)."""
+        factory = database.create_session_factory("sqlite+aiosqlite:///:memory:")
+        assert isinstance(factory, async_sessionmaker)
 
     def test_get_db_session_is_async_generator(self) -> None:
+        """get_db_session is an async generator function."""
         assert inspect.isasyncgenfunction(database.get_db_session)
 
-    async def test_get_db_session_yields_session(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    async def test_get_db_session_yields_session(self) -> None:
         """Test get_db_session yields an AsyncSession and closes it."""
         test_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
@@ -428,9 +430,7 @@ class TestDatabaseConfiguration:
         async with test_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        monkeypatch.setattr(database, "async_session_factory", test_factory)
-
-        gen = database.get_db_session()
+        gen = database.get_db_session(test_factory)
         session = await gen.__anext__()
         assert isinstance(session, AsyncSession)
         with pytest.raises(StopAsyncIteration):
@@ -438,10 +438,7 @@ class TestDatabaseConfiguration:
 
         await test_engine.dispose()
 
-    async def test_get_db_session_rollback_on_exception(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
+    async def test_get_db_session_rollback_on_exception(self) -> None:
         """Test get_db_session rolls back on exception."""
         test_engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
@@ -458,9 +455,7 @@ class TestDatabaseConfiguration:
         async with test_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        monkeypatch.setattr(database, "async_session_factory", test_factory)
-
-        gen = database.get_db_session()
+        gen = database.get_db_session(test_factory)
         session = await gen.__anext__()
         assert isinstance(session, AsyncSession)
 

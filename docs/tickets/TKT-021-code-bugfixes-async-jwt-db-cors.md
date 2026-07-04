@@ -1,7 +1,7 @@
 ---
 id: TKT-021
 type: ticket
-status: draft
+status: in_review
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: M
@@ -66,3 +66,5 @@ Fix 5 code-level issues found by RV-CODE-FULL: H1 (blocking bcrypt/QR in async),
 
 ## §10 Execution Log
 - 2026-07-04 Viktor: ticket created (emergency fix session)
+- 2026-07-04 opencode-executor: started; implementing §5 Outputs.
+- 2026-07-04 opencode-executor: in_review; tests 217 pass (1 skipped); lint clean; typecheck clean; docs-ci OK.
