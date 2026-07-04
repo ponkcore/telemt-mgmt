@@ -194,6 +194,109 @@ See `infra/exit/angie-sni-router.conf.template` for full inline documentation.
 > [TELEMT_TSPU_EVASION_PATTERNS.md](docs/knowledge/TELEMT_TSPU_EVASION_PATTERNS.md) Pattern 4.
 
 
+## Self-steal domain (recommended for production)
+
+By default, `deploy-exit.sh` uses a third-party domain (`www.microsoft.com`) as
+the `tls_domain` for FakeTLS camouflage. This works, but creates an **ASN
+mismatch**: the domain's A-record resolves to a third-party CDN (e.g.
+Microsoft Azure AS8075) while the actual TCP connection originates from your
+exit server (e.g. Hetzner AS24940). MegaFon has blocked connections based on
+this A-record cross-check.
+
+**Self-steal** eliminates this mismatch entirely: you register a domain, point
+its A-record to your exit server's IP, obtain a TLS certificate, and set
+`tls_domain` to your own domain. telemt's `tls_emulation` then fetches the
+ServerHello from your own server — the A-record resolves to your server's IP,
+so the ASN is identical to the actual connection's ASN. TSPU's A-record
+cross-check passes by construction.
+
+### When to use self-steal
+
+| Scenario | Use self-steal? | Why |
+|---|---|---|
+| Production deployment | **Yes** (recommended) | Eliminates ASN mismatch — the strongest TSPU evasion |
+| Quick test / development | No | Third-party default (`www.microsoft.com`) is faster to set up |
+| No domain available | No | Use `www.microsoft.com` (safe default, no ASN mismatch on most ISPs) |
+
+### Setup steps
+
+1. **Register a domain** (e.g. `cdn.example.com`). Use a generic-looking name
+   that doesn't attract attention. Any registrar works — the domain only needs
+   DNS management.
+
+2. **Configure DNS A-record** pointing to your exit server's IP:
+   ```
+   cdn.example.com  A  <exit-server-IP>  TTL=300
+   ```
+   Set TTL to 300 seconds (5 minutes) for fast rotation. If using Cloudflare,
+   set the DNS record to **DNS-only (grey cloud)** — the A-record must resolve
+   directly to your server IP, not Cloudflare's proxy IPs.
+
+3. **Run `deploy-exit.sh`** and enter your domain when prompted for
+   `TLS_DOMAIN`:
+   ```
+   Enter FakeTLS domain (default: www.microsoft.com, or your own domain for self-steal): cdn.example.com
+   ```
+   The script automatically:
+   - Detects that `cdn.example.com` is not in the known third-party list
+   - Prompts you to confirm the DNS A-record is configured
+   - Obtains a Let's Encrypt certificate via `certbot` (HTTP-01 challenge)
+   - Generates `angie-selsteal.conf` with a TLS server block on :443
+   - Sets `mask_host = "cdn.example.com"` and `mask_port = 443` in `config.toml`
+
+4. **Set up cert renewal** (manual — NOT automated by the deploy script):
+   ```bash
+   # Add to crontab on the exit server:
+   0 3 * * * certbot renew && docker restart telemt-mask
+   ```
+   Certbot renew checks daily; certificates renew at 30 days before expiry.
+
+### How it works
+
+```
+Telegram client → entry server (VLESS-Reality) → exit server
+                                                    │
+                                                    ├─ Xray-exit :443 (VLESS-Reality inbound)
+                                                    ├─ telemt :8443 (FakeTLS/MTProto)
+                                                    │   tls_domain = "cdn.example.com"
+                                                    │   mask_host = "cdn.example.com"
+                                                    │   mask_port = 443
+                                                    │   tls_emulation fetches ServerHello
+                                                    │   from cdn.example.com:443 ↓
+                                                    └─ Angie :443 (TLS cert for cdn.example.com)
+                                                        ssl_certificate = /etc/letsencrypt/live/cdn.example.com/fullchain.pem
+                                                        → returns real ServerHello to telemt
+
+TSPU sees: SNI=cdn.example.com, A-record → exit server IP, ASN = exit server's ASN ✓
+```
+
+### Advantages
+
+- **Eliminates ASN mismatch** — the strongest TSPU A-record cross-check evasion
+- **Operator controls rotation** — update DNS A-record (TTL=300s), restart
+  telemt (~30 seconds), propagation in ~5 minutes. Total downtime: under 6
+  minutes.
+- **No dependency on third-party TLS config** — `tls_emulation` always succeeds
+  because you control the TLS server
+- **Defense in depth** — even with encrypted S2 (VLESS-Reality), self-steal
+  adds an additional layer of ASN consistency on the S3 segment
+
+### Third-party domain default
+
+If you don't use self-steal, `deploy-exit.sh` defaults to `www.microsoft.com`
+(previously `github.com`). The change was made because `github.com` (Azure
+AS8075) creates an ASN mismatch on Hetzner exit servers that MegaFon has
+already acted on. `www.microsoft.com` is on the same Azure CDN but has not
+been specifically targeted, and is a higher-traffic domain with more stable
+TLS 1.3 characteristics.
+
+> **Reference:** [ADR-010](docs/architecture/adr/ADR-010-self-steal-domain-strategy.md)
+> documents the architectural decision.
+> [TELEMT_FAKETLS_DOMAIN_RESEARCH_2026.md](docs/knowledge/TELEMT_FAKETLS_DOMAIN_RESEARCH_2026.md)
+> §2 contains the full self-steal implementation guide and domain selection
+> rationale.
+
+
 ## Embed in an existing bot
 
 ```python

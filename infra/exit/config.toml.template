@@ -2,15 +2,29 @@
 # config.toml.template — telemt configuration for the exit server.
 #
 # Placeholders (replaced by deploy-exit.sh):
-#   __AD_TAG__        — Telegram ad_tag (32-char hex from @MTProxybot)
+#   __AD_TAG__         — Telegram ad_tag (32-char hex from @MTProxybot)
 #   __TELEMT_SECRET__  — default user secret (auto-generated if empty)
-#   __TLS_DOMAIN__     — FakeTLS camouflage domain (github.com recommended)
+#   __TLS_DOMAIN__     — FakeTLS camouflage domain (default: www.microsoft.com,
+#                        or operator's self-steal domain)
 #   __AUTH_HEADER__    — API auth header (auto-generated if empty)
 #   __MANAGEMENT_IPS__ — comma-separated CIDR list for API whitelist
+#   __MASK_HOST__      — mask host domain (self-steal: TLS_DOMAIN; third-party: TLS_DOMAIN)
+#   __MASK_PORT__      — mask host port (self-steal: 443; third-party: 8080)
 #
 # Per ARCH-001 §5 invariants:
 #   INV-DOCKER  — hardened container (cap_drop ALL, read_only, no-new-privileges)
 #   INV-SECRETS — all secrets via env vars, .env.example documents names
+#
+# Self-steal mode (ADR-010@0.2.0):
+#   When the operator uses their own domain as tls_domain, mask_port is set
+#   to 443 so tls_emulation fetches the ServerHello from the operator's own
+#   Angie TLS server (angie-selsteal.conf.template). This eliminates ASN
+#   mismatch — the domain's A-record resolves to the exit server's IP.
+#
+# Third-party mode (default):
+#   When using a third-party domain (www.microsoft.com, etc.), mask_port is
+#   8080 — Angie serves the mask host on :8080 (non-TLS). tls_emulation
+#   fetches the ServerHello from the third-party domain directly.
 # ─────────────────────────────────────────────────────────────────────────────
 
 [general]
@@ -43,15 +57,25 @@ auth_header = "__AUTH_HEADER__"
 
 [censorship]
 # FakeTLS domain — the SNI presented to DPI inspection.
+# Self-steal: operator's own domain (eliminates ASN mismatch).
+# Third-party: www.microsoft.com (recommended), github.com (fallback).
 tls_domain = "__TLS_DOMAIN__"
-# mask = true: non-TLS requests are redirected to the mask host (Angie :8080).
+# mask = true: non-TLS requests are redirected to the mask host (Angie).
 mask = true
+# mask_host: the domain telemt's tls_emulation fetches ServerHello from.
+# Self-steal mode: the operator's domain (A-record → exit server IP).
+# Third-party mode: same as tls_domain (fetches from third-party server).
+mask_host = "__MASK_HOST__"
+# mask_port: port for tls_emulation ServerHello fetch.
+# Self-steal mode: 443 (Angie serves TLS cert for the self-steal domain).
+# Third-party mode: 8080 (Angie serves mask host on non-standard port).
+mask_port = __MASK_PORT__
 # unknown_sni_action: reject connections with unrecognised SNI (hardening).
 unknown_sni_action = "reject_handshake"
 # mask_proxy_protocol: PROXYv1 (text-based) for client IP preservation.
 # Less fingerprintable than PROXYv2 (binary signature) — see ARCH-001 §3 C5, research §4.
 mask_proxy_protocol = 1
-# tls_emulation: fetch real ServerHello from tls_domain for accurate TLS fingerprint.
+# tls_emulation: fetch real ServerHello from mask_host:mask_port for accurate TLS fingerprint.
 tls_emulation = true
 
 [access.user_max_tcp_conns]

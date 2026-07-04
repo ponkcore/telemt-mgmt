@@ -1,0 +1,115 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# angie-selsteal.conf.template — Angie HTTPS config for self-steal domain.
+#
+# ALTERNATIVE to the default angie.conf.template. Use this when the operator
+# has configured a self-steal domain (their own domain with DNS A-record
+# pointing to this exit server). This config serves a TLS server block on
+# :443 for the self-steal domain so telemt's tls_emulation can fetch a real
+# ServerHello from the operator's own server.
+#
+# Per ADR-010@0.2.0 / ARCH-001@0.2.0 §3 C5:
+#   - Self-steal eliminates ASN mismatch: the domain's A-record resolves to
+#     the exit server's IP, so TSPU's A-record cross-check passes by
+#     construction.
+#   - telemt's tls_emulation fetches the ServerHello from
+#     mask_host:mask_port (self-steal: <domain>:443 — this server block).
+#   - The TLS cert is obtained via Let's Encrypt (certbot or Angie ACME).
+#
+# Placeholders (replaced by deploy-exit.sh when SELF_STEAL_DOMAIN is set):
+#   __TLS_DOMAIN__    — the operator's self-steal domain (e.g. cdn.example.com)
+#   __TLS_CERT_PATH__ — path to fullchain.pem (inside container: /var/www/mask/certs/)
+#   __TLS_KEY_PATH__  — path to privkey.pem (inside container: /var/www/mask/certs/)
+#
+# How self-steal mask_host works:
+#   1. telemt sets tls_domain = mask_host = "cdn.example.com", mask_port = 443
+#   2. telemt's tls_emulation fetches ServerHello from cdn.example.com:443
+#   3. This Angie server block responds with the real TLS cert + ServerHello
+#   4. telemt emulates those TLS characteristics in its FakeTLS handshake
+#   5. TSPU sees SNI=cdn.example.com, A-record → exit server IP, ASN matches
+#
+# Cert renewal (manual — NOT automated by this template):
+#   certbot certonly --standalone -d cdn.example.com
+#   # Or use Angie's built-in ACME (see Angie docs)
+#   # Renewal: certbot renew (add to cron/systemd timer manually)
+#   # Cert paths (deploy-exit.sh copies to ./mask/certs/ for container access):
+#   #   /var/www/mask/certs/fullchain.pem
+#   #   /var/www/mask/certs/privkey.pem
+#
+# Deploy steps (automated by deploy-exit.sh when SELF_STEAL_DOMAIN is set):
+#   1. deploy-exit.sh detects self-steal domain (not in known third-party list)
+#   2. Operator confirms DNS A-record is configured
+#   3. deploy-exit.sh runs certbot to obtain Let's Encrypt cert
+#   4. deploy-exit.sh copies this template to angie.conf with placeholders
+#      substituted
+#   5. config.toml gets mask_host=<domain>, mask_port=443
+#
+# Port mapping (self-steal mode):
+#   :443 → Angie (this TLS server block — serves cert for tls_emulation)
+#   :8080 → Angie (mask host stub page — same as standalone mode)
+#   :8443 → telemt (internal, forwarded from Xray-exit)
+#
+# NOTE: In self-steal mode, Angie owns :443 for the TLS server block. This
+# is different from standalone mode where telemt/Xray owns :443. If using
+# encrypted S2 (ADR-009@0.2.0, Xray-exit on :443), self-steal TLS on :443
+# conflicts with Xray. In that case, either:
+#   a) Use SNI routing (angie-sni-router.conf.template) to multiplex :443, or
+#   b) Skip the :443 TLS block and rely on third-party mask_host instead.
+# deploy-exit.sh warns the operator if both self-steal and Xray-exit are active.
+# ─────────────────────────────────────────────────────────────────────────────
+
+worker_processes auto;
+
+events {
+    worker_connections 256;
+}
+
+http {
+    include       /etc/angie/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile    on;
+    tcp_nopush  on;
+    keepalive_timeout 65;
+
+    # ── Self-steal TLS server block (port 443) ─────────────────────────────
+    # Serves the operator's TLS certificate so telemt's tls_emulation can
+    # fetch a real ServerHello from the self-steal domain.
+    # Also responds to active probes with a plausible-looking HTTPS response.
+    server {
+        listen 443 ssl;
+        listen [::]:443 ssl;
+        server_name __TLS_DOMAIN__;
+
+        ssl_certificate     __TLS_CERT_PATH__;
+        ssl_certificate_key __TLS_KEY_PATH__;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_session_cache   shared:SSL:5m;
+        ssl_session_timeout 5m;
+
+        # Return a plausible-looking response to active probes.
+        # A bare 200 OK is sufficient — TSPU probes check for TLS handshake
+        # validity, not specific page content (research §6, active probing).
+        location / {
+            return 200 'OK';
+            add_header Content-Type text/plain;
+        }
+    }
+
+    # ── Mask host server (port 8080) ───────────────────────────────────────
+    # Serves the mask (stub) page for non-TLS / direct HTTP requests.
+    # Identical to standalone angie.conf.template.
+    # Per ARCH-001 §3 C5: "Angie serves mask_host on :8080".
+    server {
+        listen 8080;
+        listen [::]:8080;
+        server_name _;
+
+        root /var/www/mask;
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }
+}

@@ -1,7 +1,7 @@
 ---
 id: TKT-019
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.2.0
 depends_on: [TKT-018@0.2.0]
 estimate: M
@@ -62,3 +62,5 @@ Add optional self-steal domain support to the exit server deploy script, enablin
 
 ## §10 Execution Log
 - 2026-07-03 architect: ticket created from TSPU evasion evaluation session.
+- 2026-07-04 opencode-executor: started
+- 2026-07-04 opencode-executor: in_review; tests 198 pass; lint clean; typecheck clean; shellcheck clean; validate_docs OK
