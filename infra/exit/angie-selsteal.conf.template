@@ -17,8 +17,8 @@
 #
 # Placeholders (replaced by deploy-exit.sh when SELF_STEAL_DOMAIN is set):
 #   __TLS_DOMAIN__    — the operator's self-steal domain (e.g. cdn.example.com)
-#   __TLS_CERT_PATH__ — path to the Let's Encrypt fullchain.pem
-#   __TLS_KEY_PATH__  — path to the Let's Encrypt privkey.pem
+#   __TLS_CERT_PATH__ — path to fullchain.pem (inside container: /var/www/mask/certs/)
+#   __TLS_KEY_PATH__  — path to privkey.pem (inside container: /var/www/mask/certs/)
 #
 # How self-steal mask_host works:
 #   1. telemt sets tls_domain = mask_host = "cdn.example.com", mask_port = 443
@@ -31,9 +31,9 @@
 #   certbot certonly --standalone -d cdn.example.com
 #   # Or use Angie's built-in ACME (see Angie docs)
 #   # Renewal: certbot renew (add to cron/systemd timer manually)
-#   # Cert paths default to:
-#   #   /etc/letsencrypt/live/<domain>/fullchain.pem
-#   #   /etc/letsencrypt/live/<domain>/privkey.pem
+#   # Cert paths (deploy-exit.sh copies to ./mask/certs/ for container access):
+#   #   /var/www/mask/certs/fullchain.pem
+#   #   /var/www/mask/certs/privkey.pem
 #
 # Deploy steps (automated by deploy-exit.sh when SELF_STEAL_DOMAIN is set):
 #   1. deploy-exit.sh detects self-steal domain (not in known third-party list)

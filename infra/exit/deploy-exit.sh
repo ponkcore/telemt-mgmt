@@ -147,33 +147,41 @@ if [[ $_is_third_party -eq 0 ]]; then
     echo "    (not in known third-party list — treating as operator-owned domain)"
     echo "    Self-steal eliminates ASN mismatch (ADR-010@0.2.0)."
 
-    # ── DNS verification prompt (AC3) ───────────────────────────────────────
+    # ── DNS verification prompt (AC3, INV-IDEMPOTENT) ──────────────────────
     # Before proceeding with cert acquisition, verify the operator has
     # configured the DNS A-record pointing to this server. certbot HTTP-01
     # challenge requires the domain to resolve to this server's IP.
-    echo ""
-    echo "  ⚠  DNS A-record requirement:"
-    echo "    $SELF_STEAL_DOMAIN must have an A-record pointing to THIS server's IP."
-    echo "    Configure it at your DNS provider (Cloudflare recommended, TTL=300)."
-    echo "    The A-record must be DNS-only (grey cloud, not proxied) for certbot."
+    # On re-run, skip the prompt if DNS was already verified (stored in .env).
+    if [[ "${SELF_STEAL_DNS_VERIFIED:-}" == "$SELF_STEAL_DOMAIN" ]]; then
+        echo "  ✓ DNS already verified for $SELF_STEAL_DOMAIN (from .env)"
+    else
+        echo ""
+        echo "  ⚠  DNS A-record requirement:"
+        echo "    $SELF_STEAL_DOMAIN must have an A-record pointing to THIS server's IP."
+        echo "    Configure it at your DNS provider (Cloudflare recommended, TTL=300)."
+        echo "    The A-record must be DNS-only (grey cloud, not proxied) for certbot."
 
-    _dns_verified=""
-    while true; do
-        printf "Have you configured DNS A-record for %s pointing to this server? (yes/no): " "$SELF_STEAL_DOMAIN"
-        read -r _dns_verified
-        _dns_verified="${_dns_verified,,}"
-        if [[ "$_dns_verified" == "yes" || "$_dns_verified" == "y" ]]; then
-            echo "  ✓ DNS verified by operator. Proceeding with cert acquisition."
-            break
-        elif [[ "$_dns_verified" == "no" || "$_dns_verified" == "n" ]]; then
-            echo "  ✗ DNS A-record not configured. Self-steal requires DNS to be set up."
-            echo "    Please configure the A-record at your DNS provider and re-run."
-            echo "    Alternatively, use a third-party domain (www.microsoft.com)."
-            exit 1
-        else
-            echo "  Please answer 'yes' or 'no'."
-        fi
-    done
+        _dns_verified=""
+        while true; do
+            printf "Have you configured DNS A-record for %s pointing to this server? (yes/no): " "$SELF_STEAL_DOMAIN"
+            read -r _dns_verified
+            _dns_verified="${_dns_verified,,}"
+            if [[ "$_dns_verified" == "yes" || "$_dns_verified" == "y" ]]; then
+                echo "  ✓ DNS verified by operator. Proceeding with cert acquisition."
+                break
+            elif [[ "$_dns_verified" == "no" || "$_dns_verified" == "n" ]]; then
+                echo "  ✗ DNS A-record not configured. Self-steal requires DNS to be set up."
+                echo "    Please configure the A-record at your DNS provider and re-run."
+                echo "    Alternatively, use a third-party domain (www.microsoft.com)."
+                exit 1
+            else
+                echo "  Please answer 'yes' or 'no'."
+            fi
+        done
+        # Persist DNS verification so we skip this prompt on re-run (INV-IDEMPOTENT).
+        save_env_var "$ENV_FILE" "SELF_STEAL_DNS_VERIFIED" "$SELF_STEAL_DOMAIN"
+        export SELF_STEAL_DNS_VERIFIED="$SELF_STEAL_DOMAIN"
+    fi
 
     # ── Let's Encrypt cert acquisition (§7 Constraints) ────────────────────
     # Obtain TLS certificate via certbot for the self-steal domain.
@@ -224,6 +232,16 @@ if [[ $_is_third_party -eq 0 ]]; then
             exit 1
         fi
     fi
+
+    # Copy certs into ./mask/certs/ so the Angie container can read them
+    # via the existing ./mask:/var/www/mask:ro volume mount (F-H2 fix).
+    CERTS_DIR="$SCRIPT_DIR/mask/certs"
+    mkdir -p "$CERTS_DIR"
+    sudo cp "$TLS_CERT_PATH" "$CERTS_DIR/fullchain.pem" 2>/dev/null || true
+    sudo cp "$TLS_KEY_PATH" "$CERTS_DIR/privkey.pem" 2>/dev/null || true
+    sudo chmod 644 "$CERTS_DIR/fullchain.pem" "$CERTS_DIR/privkey.pem" 2>/dev/null || true
+    TLS_CERT_PATH="/var/www/mask/certs/fullchain.pem"
+    TLS_KEY_PATH="/var/www/mask/certs/privkey.pem"
 
     # Save cert paths for reference.
     save_env_var "$ENV_FILE" "TLS_CERT_PATH" "$TLS_CERT_PATH"
