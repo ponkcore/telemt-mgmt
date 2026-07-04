@@ -1,7 +1,7 @@
 ---
 id: TKT-022
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: S
@@ -56,3 +56,5 @@ Fix 2 infra-level issues from RV-CODE-FULL: M4 (stale .env.example files) and M5
 
 ## §10 Execution Log
 - 2026-07-04 Viktor: ticket created (emergency fix session)
+- 2026-07-04 opencode-executor: started; implementing §5 Outputs.
+- 2026-07-04 opencode-executor: in_review; ruff pass, pytest 197 pass/1 skip, shellcheck clean, validate_docs OK; all §6 AC met.
