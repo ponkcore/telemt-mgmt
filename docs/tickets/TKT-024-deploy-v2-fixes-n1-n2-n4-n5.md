@@ -1,7 +1,7 @@
 ---
 id: TKT-024
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: S
@@ -53,11 +53,12 @@ Fix 4 bugs found during 2nd test deployment (TELEMT_DEPLOY_REPORT_V2_2026-07-04.
 - Reality SNI (entry→exit tunnel) and FakeTLS domain (telemt client-facing) are independent. FakeTLS domain stays `www.microsoft.com` — N4 only affects Reality SNI.
 
 ## §8 Definition of Done
-- [ ] All §6 AC met.
-- [ ] project.jsonc checks green.
-- [ ] Reviewer verdict pass / pass_with_changes.
-- [ ] docs-ci green.
+- [x] All §6 AC met.
+- [x] project.jsonc checks green.
+- [x] Reviewer verdict pass_with_changes.
+- [x] docs-ci green.
 
 ## §10 Execution Log
 - 2026-07-04 Viktor: ticket created from 2nd deploy report (issue #43).
 - 2026-07-04 opencode-executor: started; implemented N1 (user:"0:0", removed read_only), N2 (/app/config.toml:ro mount), N4 (EXIT_REALITY_SNI default ads.x5.ru), N5 (removed flow from entry outbound). Checks: typecheck pass, lint pass, tests 218 pass, validate_docs pass, shellcheck pass. PR #44 opened.
+- 2026-07-04 opencode-orchestrator: merged in f76a9de; RV-CODE-024-1 verdict=pass_with_changes (F-M1 fixed: status→in_review; F-L1 backlogged: BACKLOG-003 L8 .env.example stale default).
