@@ -20,7 +20,7 @@ created: 2026-07-04
 
 ### L3 — JWT stored in localStorage (XSS-accessible)
 - File: `frontend/src/api/client.ts:4`
-- Impact: Low (React escapes output, no dangerouslySetInnerHTML). ADR-002 permits.
+- Impact: Low (React escapes output, no dangerouslySetInnerHTML). ADR-002@0.1.0 permits.
 - Future: Consider httpOnly cookies with SameSite=Strict
 
 ### L4 — No integration tests for deploy scripts

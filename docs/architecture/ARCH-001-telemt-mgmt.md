@@ -2,10 +2,10 @@
 id: ARCH-001
 type: arch_spec
 status: draft
-version: 0.2.0
+version: 0.2.1
 prd_ref: PRD-001@0.3.0
-adrs: [ADR-001@0.1.2, ADR-002@0.1.0, ADR-003@0.1.1, ADR-004@0.1.1, ADR-005@0.1.0, ADR-006@0.1.0, ADR-007@0.1.0, ADR-008@0.2.0, ADR-009@0.2.0, ADR-010@0.2.0]
-tickets: [TKT-001@0.1.1, TKT-002@0.1.0, TKT-003@0.1.0, TKT-004@0.1.1, TKT-005@0.1.0, TKT-006@0.1.0, TKT-007@0.1.1, TKT-008@0.1.1, TKT-009@0.1.1, TKT-010@0.1.0, TKT-011@0.1.1, TKT-012@0.1.0, TKT-013@0.1.1, TKT-014@0.2.0, TKT-015@0.2.0, TKT-016@0.2.0, TKT-017@0.2.0, TKT-018@0.2.0, TKT-019@0.2.0]
+adrs: [ADR-001@0.1.2, ADR-002@0.1.0, ADR-003@0.1.1, ADR-004@0.1.1, ADR-005@0.1.0, ADR-006@0.1.0, ADR-007@0.1.0, ADR-008@0.2.0, ADR-009@0.2.1, ADR-010@0.2.0]
+tickets: [TKT-001@0.1.1, TKT-002@0.1.0, TKT-003@0.1.0, TKT-004@0.1.1, TKT-005@0.1.0, TKT-006@0.1.0, TKT-007@0.1.1, TKT-008@0.1.1, TKT-009@0.1.1, TKT-010@0.1.0, TKT-011@0.1.1, TKT-012@0.1.0, TKT-013@0.1.1, TKT-014@0.2.0, TKT-015@0.2.0, TKT-016@0.2.0, TKT-017@0.2.0, TKT-018@0.2.0, TKT-019@0.2.0, TKT-020@0.2.1, TKT-021@0.2.1, TKT-022@0.2.1, TKT-023@0.2.1]
 created: 2026-07-02
 ---
 
@@ -149,14 +149,15 @@ This spec designs a management layer for the telemt MTProxy server, consisting o
 
 ### C7 — Xray Exit Relay (encrypted S2 termination)
 
-- **Responsibility:** Terminate the encrypted VLESS-Reality tunnel from the entry server on :443 and forward decrypted MTProto traffic to telemt on localhost:8443 via a `freedom` outbound. Presents a VLESS-Reality handshake with configurable SNI to TSPU on the RU→EU international link. Client IP is preserved: the entry server's `xver:1` prepends a PROXYv1 header to the data stream inside the VLESS tunnel; C7 forwards this header as-is to telemt.
+- **Responsibility:** Terminate the encrypted VLESS-Reality tunnel from the entry server on :443 and forward decrypted traffic to telemt on localhost:8443 via a `freedom` outbound. Client IP is preserved: the entry server's `freedom proxyProtocol:1` prepends a PROXYv1 header into the data stream before it enters the VLESS tunnel; the exit inbound has `xver:0` (does NOT add its own PROXY header); `freedom` on exit forwards the stream as-is to telemt; telemt parses the PROXYv1 header with `proxy_protocol = true`.
 - **Interface / contract:**
   - Listens on `0.0.0.0:443` (VLESS-Reality inbound, accepts connections from entry server only by UUID authentication)
   - Forwards decrypted traffic to `127.0.0.1:8443` (telemt, internal)
   - Requires: EXIT_VLESS_UUID (shared with entry server), EXIT_REALITY_PRIVATE_KEY, EXIT_REALITY_SNI, EXIT_SHORT_IDS
+  - Exit inbound `xver: 0` — critical: do NOT set to 1 (would add a second PROXY header with the entry server's IP, breaking client IP preservation)
   - Error modes: connection refused if telemt is not listening on :8443; Reality handshake failure if UUID/keys mismatch
 - **Depends on:** telemt (localhost:8443), Docker (Xray container)
-- **Relevant ADRs:** ADR-009@0.2.0
+- **Relevant ADRs:** ADR-009@0.2.1
 
 ## §4 Data & Interfaces
 
@@ -369,4 +370,5 @@ All secrets are env vars. `.env.example` documents names with placeholder values
 - 2026-07-02 0.1.0 — initial draft.
 - 2026-07-02 0.1.1 — fixes from RV-ARCH-001 (10 findings resolved).
 - 2026-07-02 0.1.2 — fix create_router() signature drift (RV-ARCH-001-v2 Medium).
-- 2026-07-03 0.2.0 — TSPU evasion improvements: encrypted S2 via VLESS-Reality (ADR-009@0.2.0, C7), Russian Reality SNI (ads.x5.ru), PROXYv1, Angie SNI routing (ADR-008@0.2.0), RU datacenter guidance, self-steal domain strategy (ADR-010@0.2.0). 6 new tickets (TKT-014@0.2.0–TKT-019@0.2.0).
+- 2026-07-03 0.2.0 — TSPU evasion improvements: encrypted S2 via VLESS-Reality (ADR-009@0.2.1, C7), Russian Reality SNI (ads.x5.ru), PROXYv1, Angie SNI routing (ADR-008@0.2.0), RU datacenter guidance, self-steal domain strategy (ADR-010@0.2.0). 6 new tickets (TKT-014@0.2.0–TKT-019@0.2.0).
+- 2026-07-04 0.2.1 — Emergency fix: corrected entry inbound from `vless` (VLESS-Reality) to `dokodemo-door` (transparent TCP forward). ADR-009@0.2.0 incorrectly placed the VLESS-Reality on the client-facing inbound; the correct architecture has the VLESS tunnel on S2 only (entry outbound → exit inbound). Exit xver changed from 1 to 0. Entry no longer needs its own Reality keys. PROXYv1 injection via freedom proxyProtocol:1. Deploy blocker and code review fixes (TKT-020@0.2.1–TKT-023@0.2.1).
