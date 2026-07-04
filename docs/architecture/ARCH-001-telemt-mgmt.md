@@ -1,11 +1,48 @@
 ---
 id: ARCH-001
 type: arch_spec
-status: draft
+status: approve
 version: 0.2.1
 prd_ref: PRD-001@0.3.0
-adrs: [ADR-001@0.1.2, ADR-002@0.1.0, ADR-003@0.1.1, ADR-004@0.1.1, ADR-005@0.1.0, ADR-006@0.1.0, ADR-007@0.1.0, ADR-008@0.2.0, ADR-009@0.2.1, ADR-010@0.2.0]
-tickets: [TKT-001@0.1.1, TKT-002@0.1.0, TKT-003@0.1.0, TKT-004@0.1.1, TKT-005@0.1.0, TKT-006@0.1.0, TKT-007@0.1.1, TKT-008@0.1.1, TKT-009@0.1.1, TKT-010@0.1.0, TKT-011@0.1.1, TKT-012@0.1.0, TKT-013@0.1.1, TKT-014@0.2.0, TKT-015@0.2.0, TKT-016@0.2.0, TKT-017@0.2.0, TKT-018@0.2.0, TKT-019@0.2.0, TKT-020@0.2.1, TKT-021@0.2.1, TKT-022@0.2.1, TKT-023@0.2.1]
+adrs:
+  [
+    ADR-001@0.1.2,
+    ADR-002@0.1.0,
+    ADR-003@0.1.1,
+    ADR-004@0.1.1,
+    ADR-005@0.1.0,
+    ADR-006@0.1.0,
+    ADR-007@0.1.0,
+    ADR-008@0.2.0,
+    ADR-009@0.2.1,
+    ADR-010@0.2.0,
+  ]
+tickets:
+  [
+    TKT-001@0.1.1,
+    TKT-002@0.1.0,
+    TKT-003@0.1.0,
+    TKT-004@0.1.1,
+    TKT-005@0.1.0,
+    TKT-006@0.1.0,
+    TKT-007@0.1.1,
+    TKT-008@0.1.1,
+    TKT-009@0.1.1,
+    TKT-010@0.1.0,
+    TKT-011@0.1.1,
+    TKT-012@0.1.0,
+    TKT-013@0.1.1,
+    TKT-014@0.2.0,
+    TKT-015@0.2.0,
+    TKT-016@0.2.0,
+    TKT-017@0.2.0,
+    TKT-018@0.2.0,
+    TKT-019@0.2.0,
+    TKT-020@0.2.1,
+    TKT-021@0.2.1,
+    TKT-022@0.2.1,
+    TKT-023@0.2.1,
+  ]
 created: 2026-07-02
 ---
 
@@ -25,17 +62,17 @@ created: 2026-07-02
 
 - **Reuse / fork candidates evaluated:**
 
-  | Candidate | Type | Verdict | Rationale |
-  |---|---|---|---|
-  | **telemt/telemt 3.4.22** | Proxy engine | **Adopt** | Only production-ready MTProxy for Russia 2026. REST API, Prometheus, FakeTLS, PROXYv2. |
-  | **SamNet-dev/MTProxyMax** | Bash wrapper | **Reference only** | 15,486-line monolithic bash script. Valuable patterns (hot-reload via SIGHUP, voucher system, bot commands), but not embeddable as a library. Our architecture requires a Python pip package, not a bash monolith. |
-  | **amirotin/telemt_panel** | Go+React panel | **Reference only** | Go backend — we need Python (FastAPI). UI patterns worth studying but cannot reuse directly. |
-  | **danielVNru/mtproto-panel** | React+Express+PG | **Reference only** | Express backend, not FastAPI. Multi-node design interesting for future scaling. React frontend patterns may inform our panel. |
-  | **tools/telemt_api.py** (telemt repo) | Python CLI client | **Reference** | 20+ command CLI. Good API endpoint reference, but not a proper SDK. We build `TelemtClient` inspired by this. |
-  | **Grafana Dashboard #25119** | Dashboard | **Adopt** | Verified compatible with telemt 3.4.22. Direct import via ID. |
-  | **telemt grafana-dashboard-by-user.json** | Dashboard | **Adopt** | 9-panel per-user dashboard from telemt repo. |
-  | **spyrae/ProxyCraft** | Payment bot | **Reference only** | Uses mtprotoproxy backend (NOT telemt). Payment gateway patterns (YooKassa, CryptoPay) useful for future tier implementation. |
-  | **telemt/tdlib-obf** | Client obfuscation | **Out of scope** | PRD Non-Goal: no custom client builds in MVP. |
+  | Candidate                                 | Type               | Verdict            | Rationale                                                                                                                                                                                                          |
+  | ----------------------------------------- | ------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+  | **telemt/telemt 3.4.22**                  | Proxy engine       | **Adopt**          | Only production-ready MTProxy for Russia 2026. REST API, Prometheus, FakeTLS, PROXYv2.                                                                                                                             |
+  | **SamNet-dev/MTProxyMax**                 | Bash wrapper       | **Reference only** | 15,486-line monolithic bash script. Valuable patterns (hot-reload via SIGHUP, voucher system, bot commands), but not embeddable as a library. Our architecture requires a Python pip package, not a bash monolith. |
+  | **amirotin/telemt_panel**                 | Go+React panel     | **Reference only** | Go backend — we need Python (FastAPI). UI patterns worth studying but cannot reuse directly.                                                                                                                       |
+  | **danielVNru/mtproto-panel**              | React+Express+PG   | **Reference only** | Express backend, not FastAPI. Multi-node design interesting for future scaling. React frontend patterns may inform our panel.                                                                                      |
+  | **tools/telemt_api.py** (telemt repo)     | Python CLI client  | **Reference**      | 20+ command CLI. Good API endpoint reference, but not a proper SDK. We build `TelemtClient` inspired by this.                                                                                                      |
+  | **Grafana Dashboard #25119**              | Dashboard          | **Adopt**          | Verified compatible with telemt 3.4.22. Direct import via ID.                                                                                                                                                      |
+  | **telemt grafana-dashboard-by-user.json** | Dashboard          | **Adopt**          | 9-panel per-user dashboard from telemt repo.                                                                                                                                                                       |
+  | **spyrae/ProxyCraft**                     | Payment bot        | **Reference only** | Uses mtprotoproxy backend (NOT telemt). Payment gateway patterns (YooKassa, CryptoPay) useful for future tier implementation.                                                                                      |
+  | **telemt/tdlib-obf**                      | Client obfuscation | **Out of scope**   | PRD Non-Goal: no custom client builds in MVP.                                                                                                                                                                      |
 
 - **Decision:** **Build from scratch** using telemt as the proxy engine (adopt) and Grafana dashboards (adopt). All management-layer code (bot package, API, admin panel, deploy scripts) is new. No existing project provides the combination of: embeddable pip package + FastAPI admin API + React panel + 4-target IaC deploy — which is exactly the gap this project fills.
 
@@ -45,15 +82,15 @@ This spec designs a management layer for the telemt MTProxy server, consisting o
 
 ## §2 Goal Coverage
 
-| PRD Goal | Covered by Component(s) |
-|---|---|
-| G1 — User obtains proxy link via bot | C1 (telemt_proxy package), C2 (standalone bot) |
-| G2 — Operator deploys double-hop proxy | C5 (deploy scripts: entry, exit, mgmt, monitoring) |
-| G3 — Operator creates/tracks labelled links | C3 (admin API), C4 (admin panel) |
-| G4 — Links survive migration | C5 (migrate.sh), C1 (domain-based links) |
-| G5 — Operator monitors from Grafana | C5 (deploy-monitoring.sh), C4 (Grafana embed/link) |
-| G6 — Bot embeds in existing bots via pip | C1 (telemt_proxy pip package with Router) |
-| G7 — Users see promoted channel via ad_tag | C5 (deploy-exit.sh configures ad_tag) |
+| PRD Goal                                    | Covered by Component(s)                            |
+| ------------------------------------------- | -------------------------------------------------- |
+| G1 — User obtains proxy link via bot        | C1 (telemt_proxy package), C2 (standalone bot)     |
+| G2 — Operator deploys double-hop proxy      | C5 (deploy scripts: entry, exit, mgmt, monitoring) |
+| G3 — Operator creates/tracks labelled links | C3 (admin API), C4 (admin panel)                   |
+| G4 — Links survive migration                | C5 (migrate.sh), C1 (domain-based links)           |
+| G5 — Operator monitors from Grafana         | C5 (deploy-monitoring.sh), C4 (Grafana embed/link) |
+| G6 — Bot embeds in existing bots via pip    | C1 (telemt_proxy pip package with Router)          |
+| G7 — Users see promoted channel via ad_tag  | C5 (deploy-exit.sh configures ad_tag)              |
 
 ## §3 Components
 
@@ -198,18 +235,18 @@ CREATE TABLE labelled_links (
 
 Referenced endpoints (telemt 3.4.22):
 
-| Method | Path | Purpose | Notes |
-|---|---|---|---|
-| POST | `/v1/users` | Create user | Body: `{"name": "<hash>"}`. Returns user with secret. |
-| GET | `/v1/users` | List all users | Returns array of user objects. |
-| GET | `/v1/users/{name}` | Get single user | 404 if not found. |
-| PATCH | `/v1/users/{name}` | Update user | Body: partial user object. |
-| POST | `/v1/users/{name}/disable` | Disable user | No body. |
-| POST | `/v1/users/{name}/enable` | Enable user | No body. |
-| POST | `/v1/users/{name}/rotate-secret` | Rotate secret | Returns new secret. Invalidates existing link. |
-| GET | `/v1/stats/summary` | Aggregate stats | Active users, connections, traffic. |
-| GET | `/v1/stats/users/active-ips` | Per-user IP count | For sharing detection. |
-| GET | `/v1/runtime/connections/summary` | Live connections | Per-user connection count. |
+| Method | Path                              | Purpose           | Notes                                                 |
+| ------ | --------------------------------- | ----------------- | ----------------------------------------------------- |
+| POST   | `/v1/users`                       | Create user       | Body: `{"name": "<hash>"}`. Returns user with secret. |
+| GET    | `/v1/users`                       | List all users    | Returns array of user objects.                        |
+| GET    | `/v1/users/{name}`                | Get single user   | 404 if not found.                                     |
+| PATCH  | `/v1/users/{name}`                | Update user       | Body: partial user object.                            |
+| POST   | `/v1/users/{name}/disable`        | Disable user      | No body.                                              |
+| POST   | `/v1/users/{name}/enable`         | Enable user       | No body.                                              |
+| POST   | `/v1/users/{name}/rotate-secret`  | Rotate secret     | Returns new secret. Invalidates existing link.        |
+| GET    | `/v1/stats/summary`               | Aggregate stats   | Active users, connections, traffic.                   |
+| GET    | `/v1/stats/users/active-ips`      | Per-user IP count | For sharing detection.                                |
+| GET    | `/v1/runtime/connections/summary` | Live connections  | Per-user connection count.                            |
 
 All requests require `Authorization: <auth_header>` header. All responses are JSON. Auth uses constant-time comparison. Whitelist checked before auth.
 
@@ -221,6 +258,7 @@ See C3 interface in §3. JSON request/response. JWT Bearer auth. CORS configured
 
 The `proxy_users.source` field and the `TelemtClient` are designed to allow a future
 `TierService` to be injected between the Router and the telemt API. The tier service would:
+
 1. Check user tier (Bedolaga Web API lookup by Telegram ID).
 2. Apply per-user ad_tag (telemt's `user_ad_tags` config — premium users get `"00000000000000000000000000000000"` for no ad).
 3. Apply per-user quota limits.
@@ -273,9 +311,11 @@ graph TD
 ### Parallel Execution Clusters
 
 **Wave 1** (no dependencies):
+
 - TKT-001@0.1.1: Project scaffold
 
 **Wave 2** (depends on TKT-001@0.1.1 only, disjoint outputs):
+
 - TKT-002@0.1.0: TelemtClient — outputs: `telemt_proxy/client.py`, `telemt_proxy/exceptions.py`, `tests/test_client.py`
 - TKT-003@0.1.0: DB models — outputs: `telemt_proxy/models.py`, `telemt_proxy/database.py`, `alembic/`, `tests/test_models.py`
 - TKT-008@0.1.1: Deploy exit — outputs: `infra/exit/**`
@@ -283,15 +323,18 @@ graph TD
 - TKT-012@0.1.0: One-pager + deploy-landing — outputs: `infra/landing/**`
 
 **Wave 3** (depends on TKT-002@0.1.0 + TKT-003@0.1.0, disjoint outputs):
+
 - TKT-004@0.1.1: Bot package Router — outputs: `telemt_proxy/router.py`, `telemt_proxy/hashing.py`, `telemt_proxy/link.py`, `telemt_proxy/qr.py`, `tests/test_router.py`, `tests/test_hashing.py`, `tests/test_link.py`, `tests/test_qr.py`
 - TKT-005@0.1.0: Admin API — outputs: `api/**`, `tests/test_api_*.py`
 
 **Wave 4** (disjoint outputs):
+
 - TKT-006@0.1.0: Standalone bot — outputs: `bot/**`, `tests/test_bot.py`
 - TKT-007@0.1.1: Admin panel — outputs: `frontend/src/**`
 - TKT-011@0.1.1: Deploy monitoring — outputs: `infra/monitoring/**`
 
 **Wave 5**:
+
 - TKT-010@0.1.0: Deploy mgmt — outputs: `infra/mgmt/**`
 - TKT-013@0.1.1: Migration script — outputs: `scripts/migrate.sh`
 
@@ -300,16 +343,20 @@ Concurrency cap = 3 (from `project.jsonc`). Waves 2 and 3 will be capped at 3 pa
 ### TSPU Evasion Wave (Wave 6, after PRD-001@0.3.0 initial delivery)
 
 **Wave 6a** (no dependencies on each other, disjoint outputs):
+
 - TKT-014@0.2.0: Russian Reality SNI — outputs: `infra/entry/xray-config.json.template` (inbound), `infra/entry/deploy-entry.sh` (SNI section)
 - TKT-016@0.2.0: Angie SNI routing — outputs: `infra/exit/angie-sni-router.conf.template` (new), `README.md` (SNI section)
 
 **Wave 6b** (depends on TKT-014@0.2.0):
+
 - TKT-015@0.2.0: PROXYv1 + port fix — outputs: `infra/entry/xray-config.json.template` (outbound), `infra/exit/config.toml.template` (proxy settings)
 
 **Wave 6c** (depends on TKT-015@0.2.0):
+
 - TKT-018@0.2.0: Encrypted S2 — outputs: `infra/entry/xray-config.json.template` (full replace), `infra/exit/xray-config.json.template` (new), `infra/exit/docker-compose.yml`, `infra/exit/config.toml.template` (port), `infra/entry/deploy-entry.sh` (exit prompts), `infra/exit/deploy-exit.sh` (Xray setup)
 
 **Wave 6d** (depends on TKT-018@0.2.0):
+
 - TKT-017@0.2.0: RU datacenter guidance — outputs: `infra/entry/deploy-entry.sh` (banner text), `README.md` (provider section)
 - TKT-019@0.2.0: Self-steal domain — outputs: `infra/exit/deploy-exit.sh` (TLS_DOMAIN), `infra/exit/angie-selsteal.conf.template` (new), `infra/exit/config.toml.template` (mask settings), `README.md` (self-steal section)
 
@@ -328,34 +375,34 @@ user/traffic data to assess M6 (channel subscriber growth attributable to ad_tag
 
 ### Threat Surfaces
 
-| Surface | Exposure | Mitigation |
-|---|---|---|
-| telemt API (:9091) | Mgmt server → exit server | Firewall (UFW: allow from mgmt IP only) + `auth_header` + `whitelist` in telemt config. Never exposed to internet. |
-| Admin API (:8000) | Admin panel → mgmt server | JWT auth + HTTPS (Angie reverse proxy with auto-cert). Rate limiting on `/api/auth/login` (5 attempts / minute). |
-| Admin panel (:443) | Operator browser → mgmt server | Served behind Angie with TLS. CORS restricted to panel domain. |
-| PostgreSQL (:5432) | Mgmt server internal | Docker network only (not exposed to host). No external connections. |
-| Bot (long-polling) | Outbound only | No inbound ports required. Bot token in env var. |
-| Prometheus (:9090) | Monitoring → exit server | telemt binds to `127.0.0.1:9090` by default. For remote scraping, firewall allows only monitoring server IP. |
-| Grafana (:3000) | Operator browser → monitoring | Password-protected. Angie reverse proxy with TLS on monitoring server. |
-| One-pager (:80/443) | Public internet | Static HTML only. No backend, no database, no auth needed. Angie serves it. Optional HTTPS via Let's Encrypt. |
+| Surface             | Exposure                       | Mitigation                                                                                                         |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| telemt API (:9091)  | Mgmt server → exit server      | Firewall (UFW: allow from mgmt IP only) + `auth_header` + `whitelist` in telemt config. Never exposed to internet. |
+| Admin API (:8000)   | Admin panel → mgmt server      | JWT auth + HTTPS (Angie reverse proxy with auto-cert). Rate limiting on `/api/auth/login` (5 attempts / minute).   |
+| Admin panel (:443)  | Operator browser → mgmt server | Served behind Angie with TLS. CORS restricted to panel domain.                                                     |
+| PostgreSQL (:5432)  | Mgmt server internal           | Docker network only (not exposed to host). No external connections.                                                |
+| Bot (long-polling)  | Outbound only                  | No inbound ports required. Bot token in env var.                                                                   |
+| Prometheus (:9090)  | Monitoring → exit server       | telemt binds to `127.0.0.1:9090` by default. For remote scraping, firewall allows only monitoring server IP.       |
+| Grafana (:3000)     | Operator browser → monitoring  | Password-protected. Angie reverse proxy with TLS on monitoring server.                                             |
+| One-pager (:80/443) | Public internet                | Static HTML only. No backend, no database, no auth needed. Angie serves it. Optional HTTPS via Let's Encrypt.      |
 
 ### Secrets Inventory
 
 All secrets are env vars. `.env.example` documents names with placeholder values.
 
-| Secret | Component | Storage |
-|---|---|---|
-| `TELEMT_AUTH_HEADER` | C1, C2, C3 | Env var on mgmt server |
-| `BOT_TOKEN` | C2 | Env var on mgmt server |
-| `DATABASE_URL` | C1, C2, C3 | Env var on mgmt server |
-| `HASHING_SALT` | C1 | Env var on mgmt server |
-| `JWT_SECRET_KEY` | C3 | Env var on mgmt server |
-| `ADMIN_API_KEY` | C3 | Env var on mgmt server (initial admin setup) |
-| `TELEMT_SECRET` | C5 (exit) | Env var on exit server / auto-generated |
-| `AD_TAG` | C5 (exit) | Env var on exit server |
-| `REALITY_PRIVATE_KEY` | C5 (entry) | Env var on entry server / auto-generated |
-| `CLOUDFLARE_API_TOKEN` | C5 (migrate) | Env var on mgmt server |
-| `GRAFANA_ADMIN_PASSWORD` | C5 (monitoring) | Env var on monitoring server |
+| Secret                   | Component       | Storage                                      |
+| ------------------------ | --------------- | -------------------------------------------- |
+| `TELEMT_AUTH_HEADER`     | C1, C2, C3      | Env var on mgmt server                       |
+| `BOT_TOKEN`              | C2              | Env var on mgmt server                       |
+| `DATABASE_URL`           | C1, C2, C3      | Env var on mgmt server                       |
+| `HASHING_SALT`           | C1              | Env var on mgmt server                       |
+| `JWT_SECRET_KEY`         | C3              | Env var on mgmt server                       |
+| `ADMIN_API_KEY`          | C3              | Env var on mgmt server (initial admin setup) |
+| `TELEMT_SECRET`          | C5 (exit)       | Env var on exit server / auto-generated      |
+| `AD_TAG`                 | C5 (exit)       | Env var on exit server                       |
+| `REALITY_PRIVATE_KEY`    | C5 (entry)      | Env var on entry server / auto-generated     |
+| `CLOUDFLARE_API_TOKEN`   | C5 (migrate)    | Env var on mgmt server                       |
+| `GRAFANA_ADMIN_PASSWORD` | C5 (monitoring) | Env var on monitoring server                 |
 
 ### AuthZ / Isolation Model
 
