@@ -1,7 +1,7 @@
 ---
 id: TKT-023
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: L
@@ -101,3 +101,4 @@ cap_add: [NET_BIND_SERVICE]
 - 2026-07-04 Viktor: ticket created (emergency fix session)
 - 2026-07-04 opencode-executor: started; implementing §5 Outputs (D1-D8 deploy blockers).
 - 2026-07-04 opencode-executor: in_review; ruff pass, pytest 198 pass (1 skip), shellcheck clean, validate_docs 1 pre-existing error (RV-CODE-022-01, not in scope), AC1-AC10 all verified.
+- 2026-07-04 opencode-orchestrator: merged in 8df5327; RV-CODE-023-01 verdict=pass_with_changes; F-M1 (pre-existing docs-ci) fixed on main before merge.
