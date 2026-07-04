@@ -7,47 +7,43 @@
   },
   "inbounds": [
     {
-      "tag": "vless-reality-in",
+      "tag": "public-in",
       "listen": "0.0.0.0",
       "port": 443,
-      "protocol": "vless",
+      "protocol": "dokodemo-door",
       "settings": {
-        "clients": [
-          {
-            "id": "__VLESS_UUID_ENTRY__",
-            "level": 0,
-            "email": "telemt-entry@default"
-          }
-        ],
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "show": false,
-          "dest": "__REALITY_SNI__:443",
-          "xver": 1,
-          "serverNames": [__REALITY_SERVER_NAMES__],
-          "privateKey": "__REALITY_PRIVATE_KEY__",
-          "minClientVer": "",
-          "maxClientVer": "",
-          "maxTimeDiff": 0,
-          "shortIds": [__REALITY_SHORT_IDS__],
-          "fingerprint": "firefox"
-        }
+        "address": "127.0.0.1",
+        "port": 10444,
+        "network": "tcp"
       },
       "sniffing": {
-        "enabled": true,
-        "destOverride": [
-          "http",
-          "tls",
-          "quic"
-        ]
+        "enabled": false
+      }
+    },
+    {
+      "tag": "tunnel-in",
+      "listen": "127.0.0.1",
+      "port": 10444,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "127.0.0.1",
+        "port": 10445,
+        "network": "tcp"
+      },
+      "sniffing": {
+        "enabled": false
       }
     }
   ],
   "outbounds": [
+    {
+      "tag": "proxy-injector",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "AsIs",
+        "proxyProtocol": 1
+      }
+    },
     {
       "tag": "proxy-to-exit",
       "protocol": "vless",
@@ -99,8 +95,15 @@
     "rules": [
       {
         "type": "field",
+        "inboundTag": "public-in",
+        "outboundTag": "proxy-injector",
+        "network": "tcp"
+      },
+      {
+        "type": "field",
+        "inboundTag": "tunnel-in",
         "outboundTag": "proxy-to-exit",
-        "network": "tcp,udp"
+        "network": "tcp"
       }
     ]
   }
