@@ -28,7 +28,7 @@ trap _finish_timer EXIT
 
 # Resolve script directory (handles symlinks)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INFRA_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source shared helpers
 # shellcheck disable=SC1091

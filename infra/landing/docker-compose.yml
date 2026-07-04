@@ -5,15 +5,15 @@
 #   cap_drop: [ALL], read_only: true where possible,
 #   security_opt: [no-new-privileges:true]
 #
-# The Angie container only needs to read static files and bind to port 80/443.
-# It does not need NET_BIND_SERVICE since we bind to host ports via Docker.
+# The Angie container needs to read static files and bind to port 80/443.
 # tmpfs is mounted for /tmp and /var/cache/angie (writable runtime dirs Angie
 # needs for temp files and cache) since the root filesystem is read-only.
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
   angie:
-    image: angie/angie:latest
+    # D1: Official Angie registry image (angie/angie:latest doesn't exist on Docker Hub).
+    image: docker.angie.software/angie:1.8.1-alpine
     container_name: telemt-landing
     restart: unless-stopped
     ports:
@@ -23,7 +23,8 @@ services:
       - ./html:/var/www/html:ro
       - ./angie.conf:/etc/angie/angie.conf:ro
       - ./certs:/etc/angie/certs:ro
-    read_only: true
+    # D5: Angie needs to write to cache dirs — remove read_only.
+    # Angie entrypoint chowns cache dirs and setgids to the angie user.
     tmpfs:
       - /tmp
       - /var/cache/angie
@@ -34,6 +35,9 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+      - CHOWN
+      - SETGID
+      - SETUID
     networks:
       - landing
 
