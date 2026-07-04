@@ -7,7 +7,7 @@ status: in_review
 created: 2026-07-04
 ---
 
-# RV-CODE-022-01: review of TKT-022 (PR #39)
+# RV-CODE-022-01: review of TKT-022@0.2.1 (PR #39)
 
 **Verdict:** pass_with_changes
 **Summary:** All §6 acceptance criteria are met and shell/project checks pass, but `docs-ci` is red due to a pre-existing unversioned reference in `docs/reviews/RV-CODE-020-01.md` not introduced by this PR.

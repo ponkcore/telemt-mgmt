@@ -7,7 +7,7 @@ status: in_review
 created: 2026-07-04
 ---
 
-# RV-CODE-020-01: review of TKT-020 (PR #40)
+# RV-CODE-020-01: review of TKT-020@0.2.1 (PR #40)
 
 **Verdict:** pass_with_changes
 **Summary:** Entry inbound correctly switched to dokodemo-door, exit xver set to 0, deploy script simplified, and ArchSpec secrets inventory updated; one Medium ticket-documentation gap and one Low dead-config item remain.
@@ -37,7 +37,7 @@ created: 2026-07-04
 - none
 
 ### Medium  (fix or backlog)
-- **F-M1:** `docs/tickets/TKT-020-fix-entry-inbound-dokodemo-door.md` §5 Outputs omits `docs/architecture/ARCH-001-telemt-mgmt.md`, even though §2 In Scope explicitly requires patching it and the PR modifies it. Update the ticket's §5 Outputs to include this file.
+- **F-M1:** `docs/tickets/TKT-020@0.2.1-fix-entry-inbound-dokodemo-door.md` §5 Outputs omits `docs/architecture/ARCH-001-telemt-mgmt.md`, even though §2 In Scope explicitly requires patching it and the PR modifies it. Update the ticket's §5 Outputs to include this file.
 
 ### Low  (optional)
 - **F-L1:** `infra/entry/xray-config.json.template:28-31` `tunnel-in` sets `address: 127.0.0.1, port: 10445`, but routing (`:102-107`) sends `tunnel-in` to `proxy-to-exit`, so the destination is overridden and this setting is dead/config-misleading. Consider removing or commenting it out.
