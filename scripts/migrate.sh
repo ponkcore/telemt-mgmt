@@ -365,22 +365,35 @@ banner "STEP 7/8: Health check on new server (AC5)"
 
 echo "→ Waiting for new server to accept connections (TTL=60s max)..."
 
-# Wait for DNS propagation + container startup (up to ~2 min, TTL=60).
-# Uses only curl (no dig/seq — §7 Constraints: tar, scp, curl, jq only).
+# Health check strategy depends on SERVER_TYPE (M5 fix):
+# - Exit servers: Angie serves a mask host on :8080 — use HTTP check.
+# - Entry servers: run Xray dokodemo-door/VLESS-Reality (not HTTP) — skip curl
+#   entirely and go straight to Docker container status check.
 HEALTH_CHECK_OK=false
-for (( _attempt = 1; _attempt <= 12; _attempt++ )); do
-    if curl -sf --connect-timeout 5 --max-time 10 "https://${DOMAIN}" >/dev/null 2>&1; then
-        echo "  ✓ New server responding at ${DOMAIN} (attempt ${_attempt}/12)"
-        HEALTH_CHECK_OK=true
-        break
-    fi
-    echo "  → Waiting for DNS propagation + container startup (${_attempt}/12)..."
-    sleep 10
-done
 
-# If domain check failed (DNS not yet propagated), try Docker status on new server.
+if [[ "$SERVER_TYPE" == "exit" ]]; then
+    # Exit server: HTTP health check against Angie mask host on :8080.
+    # Wait for DNS propagation + container startup (up to ~2 min, TTL=60).
+    # Uses only curl (no dig/seq — §7 Constraints: tar, scp, curl, jq only).
+    for (( _attempt = 1; _attempt <= 12; _attempt++ )); do
+        if curl -sf --connect-timeout 5 --max-time 10 "http://${DOMAIN}:8080" >/dev/null 2>&1; then
+            echo "  ✓ New server responding at http://${DOMAIN}:8080 (attempt ${_attempt}/12)"
+            HEALTH_CHECK_OK=true
+            break
+        fi
+        echo "  → Waiting for DNS propagation + container startup (${_attempt}/12)..."
+        sleep 10
+    done
+else
+    # Entry server: runs Xray dokodemo-door/VLESS-Reality on :443 — does not
+    # serve HTTP(S). Skip curl and rely on Docker container status check below.
+    echo "  Entry server — skipping HTTP health check (no HTTP service)."
+    echo "  Will verify via Docker container status instead."
+fi
+
+# If HTTP check failed or was skipped (entry servers), try Docker status on new server.
 if [[ "$HEALTH_CHECK_OK" != "true" ]]; then
-    echo "⚠  Domain health check failed — trying Docker status on new server..."
+    echo "⚠  HTTP health check unavailable — trying Docker status on new server..."
     if ssh "${SSH_USER}@${NEW_SERVER_IP}" \
         "docker compose -f ${REMOTE_CONFIG_PATH}/docker-compose.yml ps 2>/dev/null | \
          grep -q 'Up' 2>/dev/null || \
