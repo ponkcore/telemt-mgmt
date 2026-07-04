@@ -55,8 +55,7 @@
             "users": [
               {
                 "id": "__EXIT_VLESS_UUID__",
-                "encryption": "none",
-                "flow": "xtls-rprx-vision"
+                "encryption": "none"
               }
             ]
           }

@@ -35,7 +35,7 @@
 #   EXIT_VLESS_UUID          — VLESS UUID for exit Xray inbound (AC10)
 #   EXIT_REALITY_PRIVATE_KEY — X25519 private key for exit Xray Reality (AC9)
 #   EXIT_REALITY_PUBLIC_KEY  — X25519 public key (output for entry server)
-#   EXIT_REALITY_SNI         — SNI for exit Reality (default: www.microsoft.com)
+#   EXIT_REALITY_SNI         — SNI for exit Reality (default: ads.x5.ru)
 #   EXIT_REALITY_SHORT_IDS   — Comma-separated short IDs for exit Reality
 #   AUTH_HEADER              — telemt API auth header
 #   SELF_STEAL_DOMAIN        — set to TLS_DOMAIN when it's a self-steal domain
@@ -401,13 +401,17 @@ save_env_var "$ENV_FILE" "EXIT_VLESS_UUID" "$EXIT_VLESS_UUID"
 
 # ── Exit Reality SNI and short IDs ──────────────────────────────────────────
 # EXIT_REALITY_SNI — SNI for the exit server's Reality.
-# Default: www.microsoft.com (TKT-019 self-steal is deferred; this is safe).
+# N4 (TKT-024): default changed from www.microsoft.com to ads.x5.ru.
+# www.microsoft.com (Akamai CDN) breaks the VLESS-Reality uTLS handshake —
+# the ClientHello hangs with zero bytes sent (verified via xray tls ping).
+# ads.x5.ru is the verified-working default. This is the Reality SNI for the
+# entry->exit tunnel only; it is independent of the FakeTLS tls_domain.
 if [[ -n "${EXIT_REALITY_SNI:-}" ]]; then
     echo "✓ EXIT_REALITY_SNI already set (from .env): $EXIT_REALITY_SNI"
 else
     EXIT_REALITY_SNI="$(prompt_for "EXIT_REALITY_SNI" \
-        "Enter exit Reality SNI (default: www.microsoft.com)" \
-        "www.microsoft.com")"
+        "Enter exit Reality SNI (default: ads.x5.ru)" \
+        "ads.x5.ru")"
 fi
 save_env_var "$ENV_FILE" "EXIT_REALITY_SNI" "$EXIT_REALITY_SNI"
 
