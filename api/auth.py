@@ -8,11 +8,14 @@ Per ADR-002@0.1.0:
 
 Invariants:
   - INV-SECRETS: JWT_SECRET_KEY from env var.
-  - INV-ASYNC: password verification and DB access are async.
+  - INV-ASYNC: password verification and DB access are async. bcrypt
+    operations (checkpw, hashpw) are wrapped in ``asyncio.to_thread()``
+    because they are intentionally CPU-intensive (12 rounds ≈ 200-400 ms).
 """
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
@@ -131,8 +134,11 @@ def create_access_token(username: str) -> str:
     return encoded
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plaintext password against a bcrypt hash.
+
+    Uses ``asyncio.to_thread()`` to run ``bcrypt.checkpw()`` in a
+    thread pool, preventing event-loop starvation (INV-ASYNC, H1).
 
     Args:
         plain_password: The plaintext password to check.
@@ -142,7 +148,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         True if the password matches the hash.
     """
     try:
-        result: bool = bcrypt.checkpw(
+        result: bool = await asyncio.to_thread(
+            bcrypt.checkpw,
             plain_password.encode("utf-8"),
             hashed_password.encode("utf-8"),
         )
@@ -151,8 +158,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def get_password_hash(password: str) -> str:
+async def get_password_hash(password: str) -> str:
     """Hash a plaintext password using bcrypt.
+
+    Uses ``asyncio.to_thread()`` to run ``bcrypt.hashpw()`` in a
+    thread pool, preventing event-loop starvation (INV-ASYNC, H1).
 
     Args:
         password: The plaintext password to hash.
@@ -160,7 +170,8 @@ def get_password_hash(password: str) -> str:
     Returns:
         The bcrypt hash string.
     """
-    hashed: bytes = bcrypt.hashpw(
+    hashed: bytes = await asyncio.to_thread(
+        bcrypt.hashpw,
         password.encode("utf-8"),
         bcrypt.gensalt(),
     )
@@ -206,7 +217,7 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not verify_password(body.password, admin_user.password_hash):
+    if not await verify_password(body.password, admin_user.password_hash):
         rate_limiter.record_attempt(client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -35,19 +35,15 @@ from typing import TYPE_CHECKING
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
 
 from bot.config import BotConfig
 from telemt_proxy.client import TelemtClient
 from telemt_proxy.config import ProxyConfig
+from telemt_proxy.database import create_session_factory
 from telemt_proxy.router import create_router
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncEngine
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +78,9 @@ def setup_bot(config: BotConfig) -> tuple[Bot, Dispatcher, TelemtClient]:
         base_url=config.telemt_api_url,
     )
 
-    # ── DB session factory (INV-ORM, INV-ASYNC) ──────────────────────────
-    engine: AsyncEngine = create_async_engine(config.database_url, echo=False)
-    db_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
+    # ── DB session factory (INV-ORM, INV-ASYNC, M1) ──────────────────────
+    db_session_factory: async_sessionmaker[AsyncSession] = create_session_factory(
+        config.database_url,
     )
 
     # ── Router from telemt_proxy (AC2, M3 ≤3-line integration) ───────────

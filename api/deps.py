@@ -1,7 +1,9 @@
 """FastAPI dependencies for the admin API (C3).
 
 Provides:
-- ``get_db_session`` — re-exports the async DB session dependency from telemt_proxy.
+- ``get_db_session`` — async DB session dependency using the factory from
+  ``telemt_proxy.database.create_session_factory()`` (M1: no module-level
+  engine).
 - ``get_current_user`` — validates JWT Bearer token and returns the username.
 - ``get_telemt_client`` — constructs a TelemtClient from env vars.
 
@@ -9,11 +11,13 @@ Per ADR-002@0.1.0: JWT (HS256) validation, 30-min expiry.
 Per ADR-006@0.1.0: async DB sessions via SQLAlchemy 2.x.
 Per INV-AUTH: all telemt API calls include auth_header.
 Per INV-ASYNC: all I/O async.
+Per INV-SECRETS: JWT_SECRET_KEY must be set — no hardcoded default (H2).
 """
 
 from __future__ import annotations
 
 import os
+from functools import partial
 from typing import TYPE_CHECKING
 
 import httpx
@@ -23,17 +27,24 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 
 from telemt_proxy.client import TelemtClient
+from telemt_proxy.database import create_session_factory
 from telemt_proxy.database import get_db_session as _get_db_session
 from telemt_proxy.models import AdminUser
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 # Security scheme for Bearer token extraction.
 security = HTTPBearer()
 
 # JWT configuration from env vars (INV-SECRETS).
-JWT_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "dev-secret-change-me")
+# H2: No default secret — fail fast if JWT_SECRET_KEY is unset or empty.
+JWT_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "")
+if not JWT_SECRET_KEY:
+    raise RuntimeError(
+        "JWT_SECRET_KEY environment variable must be set — see .env.example"
+    )
+
 JWT_ALGORITHM: str = "HS256"
 JWT_EXPIRE_MINUTES: int = 30
 
@@ -41,8 +52,17 @@ JWT_EXPIRE_MINUTES: int = 30
 TELEMT_API_URL: str = os.environ.get("TELEMT_API_URL", "http://localhost:9091")
 TELEMT_AUTH_HEADER: str = os.environ.get("TELEMT_AUTH_HEADER", "")
 
+# M1: Create the session factory via the factory function (no module-level engine).
+_DATABASE_URL: str = os.environ.get(
+    "DATABASE_URL", "sqlite+aiosqlite:///:memory:"
+)
+_session_factory: async_sessionmaker[AsyncSession] = create_session_factory(
+    _DATABASE_URL
+)
+
 # Re-export for use in auth.py and route modules.
-get_db_session = _get_db_session
+# Bind the session factory into the dependency so callers can use it as Depends().
+get_db_session = partial(_get_db_session, _session_factory)
 
 
 async def get_current_user(

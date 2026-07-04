@@ -80,7 +80,7 @@ async def admin_user(
 ) -> AsyncIterator[str]:
     """Create a test admin user and return the username."""
     async with db_session_factory() as session:
-        password_hash = get_password_hash("testpass123")
+        password_hash = await get_password_hash("testpass123")
         admin = AdminUser(
             username="testadmin",
             password_hash=password_hash,

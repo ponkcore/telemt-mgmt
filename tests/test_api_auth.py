@@ -269,7 +269,7 @@ async def test_token_for_inactive_admin_rejected(
 
     # Create the admin user first.
     async with db_session_factory() as session:
-        password_hash = get_password_hash("testpass123")
+        password_hash = await get_password_hash("testpass123")
         admin = AdminUser(
             username="testadmin", password_hash=password_hash, is_active=True
         )

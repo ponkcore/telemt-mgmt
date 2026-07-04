@@ -1,8 +1,15 @@
 """ProxyConfig — dataclass for router configuration.
 
 Per ADR-001@0.1.2, the ``telemt_proxy`` package uses dependency injection
-for all configuration. ``ProxyConfig`` carries the server, port, and salt
-needed to build proxy links and hash Telegram IDs.
+for all configuration. ``ProxyConfig`` carries all configuration needed by
+the standalone bot and the embeddable router.
+
+Per ARCH-001@0.2.1 §3 C1, ``ProxyConfig`` has 5 fields: ``server``,
+``port``, ``salt``, ``auth_header``, and ``base_url``. All 5 fields are
+intentional — while ``auth_header`` and ``base_url`` are consumed by
+``TelemtClient`` (not the router itself), they are included on
+``ProxyConfig`` so the standalone bot can construct everything from a
+single config object (M6 design intent).
 
 The config is constructed by the host bot (or standalone bot) and passed
 to ``create_router()``. It has no side effects on import (INV-EMBED).
@@ -16,6 +23,9 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True)
 class ProxyConfig:
     """Configuration for the proxy-link distribution router.
+
+    All 5 fields are documented in ARCH-001@0.2.1 §3 C1 and are
+    intentionally kept together for single-object configuration (M6).
 
     Attributes:
         server: Entry server FQDN (domain name, never a raw IP — INV-DOMAIN).
