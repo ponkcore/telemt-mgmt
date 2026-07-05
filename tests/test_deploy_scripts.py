@@ -36,7 +36,6 @@ DEPLOY_SCRIPTS = [
     INFRA_DIR / "landing" / "deploy-landing.sh",
 ]
 
-ALL_SHELL_SCRIPTS = DEPLOY_SCRIPTS + [COMMON_SH, REPO_ROOT / "scripts" / "migrate.sh"]
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -45,11 +44,6 @@ ALL_SHELL_SCRIPTS = DEPLOY_SCRIPTS + [COMMON_SH, REPO_ROOT / "scripts" / "migrat
 def _shellcheck_available() -> bool:
     """Check if shellcheck is installed."""
     return shutil.which("shellcheck") is not None
-
-
-def _source_common_sh() -> str:
-    """Return a bash command that sources common.sh and runs a given command."""
-    return f'source "{COMMON_SH}"'
 
 
 # ── Shellcheck tests ───────────────────────────────────────────────────────
@@ -135,6 +129,26 @@ class TestSanitizeInput:
         result = run_sanitize("hello;world")  # type: ignore[operator]
         assert result == "helloworld"
 
+    def test_strips_pipes(self, run_sanitize: object) -> None:
+        """Pipe characters are stripped from input."""
+        result = run_sanitize("hello|world")  # type: ignore[operator]
+        assert result == "helloworld"
+
+    def test_strips_ampersands(self, run_sanitize: object) -> None:
+        """Ampersand characters are stripped from input."""
+        result = run_sanitize("hello&world")  # type: ignore[operator]
+        assert result == "helloworld"
+
+    def test_strips_backslashes(self, run_sanitize: object) -> None:
+        """Backslash characters are stripped from input."""
+        result = run_sanitize("hello\\world")  # type: ignore[operator]
+        assert result == "helloworld"
+
+    def test_strips_dollar_signs(self, run_sanitize: object) -> None:
+        """Dollar sign characters are stripped from input."""
+        result = run_sanitize("hello$world")  # type: ignore[operator]
+        assert result == "helloworld"
+
     def test_strips_command_injection(self, run_sanitize: object) -> None:
         """A command injection attempt is neutralised."""
         result = run_sanitize("'; rm -rf /; '")  # type: ignore[operator]
@@ -142,6 +156,14 @@ class TestSanitizeInput:
         assert ";" not in result
         assert "'" not in result
         assert "`" not in result
+
+    def test_strips_sed_injection(self, run_sanitize: object) -> None:
+        """Sed-special characters are neutralised."""
+        result = run_sanitize(r"foo|bar&baz\$qux")  # type: ignore[operator]
+        assert "|" not in result
+        assert "&" not in result
+        assert "\\" not in result
+        assert "$" not in result
 
     def test_preserves_domain_names(self, run_sanitize: object) -> None:
         """Legitimate domain names with dots and hyphens are preserved."""
@@ -178,6 +200,16 @@ class TestSanitizeInput:
         result = run_sanitize("aBcD-eFgH_iJkL-mNoP")  # type: ignore[operator]
         assert result == "aBcD-eFgH_iJkL-mNoP"
 
+    def test_preserves_uuid(self, run_sanitize: object) -> None:
+        """UUID strings with hyphens are preserved."""
+        result = run_sanitize("550e8400-e29b-41d4-a716-446655440000")  # type: ignore[operator]
+        assert result == "550e8400-e29b-41d4-a716-446655440000"
+
+    def test_preserves_hyphenated_label(self, run_sanitize: object) -> None:
+        """Labels with hyphens (e.g. forum-4pda) are preserved."""
+        result = run_sanitize("forum-4pda")  # type: ignore[operator]
+        assert result == "forum-4pda"
+
     def test_preserves_underscore_labels(self, run_sanitize: object) -> None:
         """Labels with underscores are preserved."""
         result = run_sanitize("my_label_here")  # type: ignore[operator]
@@ -203,14 +235,18 @@ class TestCommonSh:
         assert "sanitize_input()" in content
         assert "tr -d" in content  # Uses tr to strip chars
 
-    def test_sanitize_input_strips_quotes_backticks_semicolons(self) -> None:
-        """sanitize_input comment documents the stripped characters."""
+    def test_sanitize_input_strips_dangerous_chars(self) -> None:
+        """sanitize_input comment documents all stripped characters."""
         content = COMMON_SH.read_text()
-        # The function should mention all four dangerous characters
+        # The function should mention all eight dangerous characters
         assert "single quote" in content.lower() or "'" in content
         assert "double quote" in content.lower() or '"' in content
         assert "backtick" in content.lower() or "`" in content
         assert "semicolon" in content.lower() or ";" in content
+        assert "pipe" in content.lower() or "|" in content
+        assert "ampersand" in content.lower() or "&" in content
+        assert "backslash" in content.lower() or "\\" in content
+        assert "dollar" in content.lower() or "$" in content
 
 
 # ── Deploy script structure tests ──────────────────────────────────────────

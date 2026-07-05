@@ -112,9 +112,11 @@ generate_secret() {
 # sanitize_input — strips dangerous characters from user-provided input to
 # prevent injection into sed substitutions and config file generation.
 #
-# Removes: single quotes ('), double quotes ("), backticks (`), semicolons (;).
-# These characters can break sed with | delimiter, execute subshells (backticks),
-# or chain commands (semicolons) if the value reaches a shell expansion.
+# Removes: single quotes ('), double quotes ("), backticks (`), semicolons (;),
+# pipe (|), ampersand (&), backslash (\), dollar sign ($).
+# These characters can break sed with | delimiter (pipe, ampersand, backslash),
+# execute subshells (backticks, dollar), or chain commands (semicolons) if the
+# value reaches a shell expansion.
 #
 # Does NOT strip: hyphens, dots, colons, slashes, underscores, alphanumeric —
 # these are legitimate in domain names (example.com), IPs (10.0.0.5), CIDR
@@ -125,6 +127,8 @@ generate_secret() {
 # Per BACKLOG-004 / BACKLOG-007 (TKT-026).
 sanitize_input() {
     local input="$1"
-    # Strip single quotes, double quotes, backticks, semicolons.
-    printf '%s' "$input" | tr -d "'\";\`"
+    # Strip: ' " ` ; | & \ $
+    # The char set is built with $'...' to avoid quoting issues.
+    local chars=$'\'";`|&$\\\\'
+    printf '%s' "$input" | tr -d "$chars"
 }
