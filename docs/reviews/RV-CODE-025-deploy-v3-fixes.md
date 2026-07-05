@@ -7,7 +7,7 @@ status: in_review
 created: 2026-07-05
 ---
 
-# RV-CODE-025: review of TKT-025 Deploy v3 fixes (PR #51)
+# RV-CODE-025: review of TKT-025@0.2.1 Deploy v3 fixes (PR #51)
 
 **Verdict:** pass_with_changes
 **Summary:** All acceptance criteria are met and project checks are green, but two Medium findings (socat binding scope and a docs contradiction) plus one Low finding (PYTHONPATH trailing colon) should be fixed or backlogged before considering the ticket fully closed.
