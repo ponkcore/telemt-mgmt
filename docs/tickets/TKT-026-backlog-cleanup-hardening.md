@@ -102,3 +102,4 @@ Close all 7 open backlog items in one pass: deploy script input validation, UFW 
 - 2026-07-05 Mentor: ticket created (backlog cleanup + hardening, final pre-conservation pass)
 - 2026-07-05 opencode-executor: started
 - 2026-07-05 opencode-executor: in_review; tests 253 pass (1 skip); lint clean; typecheck clean; shellcheck clean
+- 2026-07-05 opencode-executor: PR #52 opened, branch tkt/TKT-026-backlog-cleanup-hardening
