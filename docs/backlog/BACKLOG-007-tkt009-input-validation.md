@@ -1,7 +1,7 @@
 ---
 id: BACKLOG-007
 type: backlog
-status: open
+status: done
 target_ticket: TKT-009@0.1.1
 created: 2026-07-03
 ---
@@ -15,3 +15,9 @@ created: 2026-07-03
 **Resolution:** Add validation: EXIT_SERVER_IP (valid IPv4), REALITY_SNI (valid domain, no `|` or `&`), REALITY_PRIVATE_KEY (base64url), REALITY_SHORT_IDS (hex). Reject values with sed-special characters.
 
 **Priority:** Medium
+
+## Resolution
+
+Closed as done (TKT-026@0.1.0). sanitize_input() from common.sh is now used in
+deploy-entry.sh on all user-provided values (EXIT_SERVER_IP, EXIT_VLESS_UUID,
+EXIT_PUBLIC_KEY, EXIT_REALITY_SNI, EXIT_SHORT_ID).

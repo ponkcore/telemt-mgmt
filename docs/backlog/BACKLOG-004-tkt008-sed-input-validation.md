@@ -1,7 +1,7 @@
 ---
 id: BACKLOG-004
 type: backlog
-status: open
+status: done
 target_ticket: TKT-008@0.1.1
 created: 2026-07-03
 ---
@@ -15,3 +15,10 @@ created: 2026-07-03
 **Resolution:** Add input validation for AD_TAG (32-char hex), TLS_DOMAIN (valid domain), DOMAIN (valid domain), and MANAGEMENT_IPS/MONITORING_IPS (valid CIDR). Reject values containing `|`, `&`, or `\`.
 
 **Priority:** Medium
+
+## Resolution
+
+Closed as done (TKT-026@0.1.0). sanitize_input() function added to infra/lib/common.sh.
+All user-provided values in deploy-exit.sh (DOMAIN, AD_TAG, TLS_DOMAIN,
+TELEMT_SECRET, MANAGEMENT_IPS, MONITORING_IPS, EXIT_REALITY_*, EXIT_VLESS_UUID)
+are now sanitized before use in sed substitutions.

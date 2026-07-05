@@ -107,6 +107,24 @@ bash infra/landing/deploy-landing.sh
 - ad_tag from @MTProxybot (requires public channel)
 - Cloudflare API token (for migration script)
 
+### Landing page deployment
+
+The landing page is a static one-pager served by Angie via Docker Compose. It
+links to your Telegram bot so users can get a proxy via a "Получить прокси"
+button. Deploy on any server (can share with the management server):
+
+```bash
+bash infra/landing/deploy-landing.sh
+```
+
+The script prompts for:
+- **BOT_URL** — Telegram bot URL (e.g. `https://t.me/myproxybot`)
+- **DOMAIN** — domain for HTTPS (optional; leave empty for HTTP-only)
+
+If a domain is provided, the script obtains a Let's Encrypt certificate via
+certbot and configures Angie for HTTPS. Idempotent — re-run to update the
+bot URL or domain.
+
 ### Russian Entry Server Provider Selection
 
 The entry server must be hosted in Russia (Russian ASN, Russian A-record for the

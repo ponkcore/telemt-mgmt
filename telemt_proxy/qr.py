@@ -13,6 +13,7 @@ from __future__ import annotations
 import io
 
 import qrcode
+from qrcode.image.pil import PilImage
 
 
 def generate_qr(link: str) -> bytes:
@@ -39,6 +40,9 @@ def generate_qr(link: str) -> bytes:
     qr.make(fit=True)
 
     img = qr.make_image(fill_color="black", back_color="white")
+    # make_image() returns PilImage when PIL is installed (our only path).
+    # The isinstance check narrows the type so mypy sees format= on save().
+    assert isinstance(img, PilImage)
     buffer = io.BytesIO()
-    img.save(buffer, kind="PNG")
+    img.save(buffer, format="PNG")
     return buffer.getvalue()

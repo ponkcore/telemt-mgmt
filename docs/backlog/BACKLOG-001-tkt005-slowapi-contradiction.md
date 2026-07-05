@@ -1,7 +1,7 @@
 ---
 id: BACKLOG-001
 type: backlog
-status: open
+status: wontfix
 source: RV-ARCH-001-v2@0.1.1
 created: 2026-07-02
 ---
@@ -31,3 +31,10 @@ When the external Architect or PO next touches TKT-005@0.1.0, change §7 to one 
 
 Option B is simpler and avoids a new dep. The custom middleware is ~20 lines (in-memory IP
 counter with TTL). Recommend Option B.
+
+## Resolution
+
+Closed as wontfix (TKT-026@0.1.0). The executor chose custom middleware (Option B) —
+no slowapi dependency was added. The contradiction in TKT-005@0.1.0 §7 is
+moot since no slowapi was used. The ticket text is historical and cannot be
+edited by the Mentor or architect-consult.

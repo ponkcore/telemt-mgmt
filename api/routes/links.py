@@ -116,6 +116,15 @@ async def create_link(
     # Create a telemt user. The username is a hash of the label for uniqueness.
     telemt_username = hashlib.sha256(body.label.encode()).hexdigest()[:16]
 
+    # NOTE: Admin-created labelled links intentionally bypass hash_telegram_id()
+    # (L5 code-review finding). Admin links are not tied to a Telegram user —
+    # they are operator-defined labelled links with no Telegram ID. Therefore
+    # there is no telegram_id to hash with HASHING_SALT. Instead, the label
+    # itself is hashed directly (SHA256) to produce both telemt_username and
+    # telegram_id_hash. The salt omission is acceptable because labels are
+    # operator-chosen strings, not PII. This is an intentional divergence from
+    # INV-HASH, which applies only to real Telegram user IDs.
+
     try:
         async with telemt_client as client:
             telemt_user = await client.create_user(telemt_username)
