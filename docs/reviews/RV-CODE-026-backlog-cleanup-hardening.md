@@ -7,14 +7,14 @@ status: in_review
 created: 2026-07-05
 ---
 
-# RV-CODE-026: review of TKT-026 — Backlog cleanup / deploy hardening + Low findings (PR #52)
+# RV-CODE-026: review of TKT-026@0.2.1 — Backlog cleanup / deploy hardening + Low findings (PR #52)
 
 **Verdict:** `pass_with_changes`
 **Summary:** All ACs are verifiably met and project checks are green, but one Medium residual-injection finding in `sanitize_input()` should be fixed or backlogged before the next deploy-script ticket.
 
 ## Contract compliance
 
-- [x] Diff modifies ONLY §5 Outputs (+ ticket status/§10 + TKT-025 §10 version-pin fix, which is explicitly allowed orchestrator work).
+- [x] Diff modifies ONLY §5 Outputs (+ ticket status/§10 + TKT-025@0.2.1 §10 version-pin fix, which is explicitly allowed orchestrator work).
 - [x] No §3 NOT-In-Scope term touched.
 - [x] No unauthorised runtime dependency.
 - [x] Every §6 AC verifiably met (citations below).
