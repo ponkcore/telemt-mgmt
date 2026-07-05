@@ -22,6 +22,44 @@
 #   - Third-party mode (default): mask_port=443, tls_emulation fetches from real domain on :443
 #   - Default third-party domain changed from github.com to www.microsoft.com
 #
+# ── Known operational issues (TKT-025 B4/B5 deploy experience docs) ────────
+#
+# B4: socat workaround for :9090/:9091 PROXYv2 reset (Medium severity)
+#   telemt's `proxy_protocol = true` in [server] applies to ALL listeners,
+#   including the metrics (:9090) and API (:9091) HTTP endpoints. External
+#   HTTP clients (Prometheus scraper, curl) cannot speak PROXYv2, so telemt
+#   resets their connections — :9090 and :9091 are unreachable directly.
+#
+#   Workaround: run socat TCP proxies on the exit server that strip the
+#   PROXYv2 header before forwarding to localhost:9090/9091:
+#     :9093 → localhost:9090  (metrics — for Prometheus scraper)
+#     :9094 → localhost:9091  (API — for management server)
+#
+#   Create two systemd services:
+#     /etc/systemd/system/telemt-metrics-proxy.service:
+#       ExecStart=/usr/bin/socat TCP-LISTEN:9093,reuseaddr,fork TCP:localhost:9090
+#     /etc/systemd/system/telemt-api-proxy.service:
+#       ExecStart=/usr/bin/socat TCP-LISTEN:9094,reuseaddr,fork TCP:localhost:9091
+#
+#   Then point Prometheus at :9093 and the management API client at :9094.
+#   Install socat: apt-get install -y socat
+#
+# B5: self-steal domain is REQUIRED for tls_emulation (Blocker for tls_emulation)
+#   telemt's rustls TLS client gets RST (connection reset) from ALL CDN-protected
+#   third-party domains (Akamai, Google, Apple, GitHub, Microsoft) when fetching
+#   the ServerHello for tls_emulation. curl (OpenSSL) works fine against the same
+#   domains, but telemt's rustls does not. As a result, tls_emulation ALWAYS
+#   falls back to a fake 2048-byte cert when using a third-party domain.
+#
+#   Self-steal is NOT optional for production tls_emulation — it is REQUIRED.
+#   With a self-steal domain, telemt fetches the ServerHello from the local
+#   Angie TLS server (operator-controlled LE cert), which always succeeds
+#   because there is no CDN WAF in the path.
+#
+#   If you need tls_emulation=true (recommended for strongest TSPU evasion),
+#   you MUST use a self-steal domain. Third-party domains will silently fail
+#   tls_emulation and fall back to a fake cert.
+#
 # Prompts for:
 #   DOMAIN          — exit server domain (e.g. proxy.example.com)
 #   AD_TAG          — Telegram ad_tag from @MTProxybot

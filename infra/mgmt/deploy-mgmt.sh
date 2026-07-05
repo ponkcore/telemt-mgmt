@@ -164,6 +164,19 @@ echo ""
 echo "✓ Configuration saved to $ENV_FILE"
 
 # ── Build frontend (React SPA) ──────────────────────────────────────────────
+# TKT-025 B6: npm build timeout workaround (Low severity)
+#   On some VPS hosts, `npm run build` exceeds the hop exec / SSH session timeout
+#   because Vite's production build is CPU-intensive (minification, tree-shaking).
+#   If the build is killed mid-way, the frontend/dist directory is incomplete and
+#   the panel shows a blank page.
+#
+#   Workaround: run deploy-mgmt.sh inside a detached screen session so the build
+#   survives SSH disconnection or exec timeout:
+#     screen -dmS mgmt-deploy bash -c 'bash infra/mgmt/deploy-mgmt.sh; echo DONE'
+#     screen -r mgmt-deploy   # reattach to monitor progress
+#
+#   Alternatively, pre-build the frontend locally and rsync frontend/dist/ to
+#   the server before running deploy-mgmt.sh.
 echo "→ Building frontend (React SPA)..."
 if [[ ! -d "$FRONTEND_DIST" ]] || [[ -z "$(ls -A "$FRONTEND_DIST" 2>/dev/null)" ]]; then
     echo "  frontend/dist not found. Building from source..."

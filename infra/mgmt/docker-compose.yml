@@ -71,6 +71,8 @@ services:
       - SETUID
 
   # ── PostgreSQL (AC3: auto-created if DATABASE_URL not provided) ────────────
+  # NOTE: PostgreSQL is exempt from cap_drop/no-new-privileges (TKT-025 B2):
+  # the entrypoint script needs CHOWN/SETGID/SETUID to initialise the data dir.
   db:
     image: postgres:16-alpine
     container_name: telemt-mgmt-db
@@ -88,10 +90,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
 
   # ── Reverse proxy: Angie with Let's Encrypt (AC5: HTTPS) ──────────────────
   # Angie is the frontend container above — it serves the built React panel

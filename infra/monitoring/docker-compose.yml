@@ -25,7 +25,6 @@ services:
       - prometheus-data:/prometheus:rw
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--alertmanager.url=http://localhost:9093"
       - "--storage.tsdb.retention.time=30d"
       - "--web.enable-lifecycle"
     read_only: true
