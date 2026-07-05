@@ -37,12 +37,16 @@
 #
 #   Create two systemd services:
 #     /etc/systemd/system/telemt-metrics-proxy.service:
-#       ExecStart=/usr/bin/socat TCP-LISTEN:9093,reuseaddr,fork TCP:localhost:9090
+#       ExecStart=/usr/bin/socat TCP-LISTEN:127.0.0.1:9093,reuseaddr,fork TCP:localhost:9090
 #     /etc/systemd/system/telemt-api-proxy.service:
-#       ExecStart=/usr/bin/socat TCP-LISTEN:9094,reuseaddr,fork TCP:localhost:9091
+#       ExecStart=/usr/bin/socat TCP-LISTEN:127.0.0.1:9094,reuseaddr,fork TCP:localhost:9091
 #
 #   Then point Prometheus at :9093 and the management API client at :9094.
 #   Install socat: apt-get install -y socat
+#
+#   NOTE: socat binds to 127.0.0.1 only — ports 9093/9094 are NOT exposed
+#   publicly. If remote access is needed (e.g. Prometheus on another server),
+#   restrict via UFW: ufw allow from <monitoring-ip> to any port 9093 proto tcp
 #
 # B5: self-steal domain is REQUIRED for tls_emulation (Blocker for tls_emulation)
 #   telemt's rustls TLS client gets RST (connection reset) from ALL CDN-protected
