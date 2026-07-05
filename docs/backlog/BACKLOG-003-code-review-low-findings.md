@@ -1,7 +1,7 @@
 ---
 id: BACKLOG-003
 type: backlog
-status: open
+status: done
 source: RV-CODE-FULL-telemt-mgmt.md
 created: 2026-07-04
 ---
@@ -42,3 +42,15 @@ created: 2026-07-04
 - File: `infra/exit/.env.example`
 - Impact: `.env.example` still shows `EXIT_REALITY_SNI=www.microsoft.com` but `deploy-exit.sh` default is now `ads.x5.ru` (TKT-024@0.2.1 N4 fix).
 - Fix: Update `.env.example` to `EXIT_REALITY_SNI=ads.x5.ru` in a future doc/infra PR.
+
+## Resolution
+
+Closed as done (TKT-026@0.1.0). All L1-L7 findings addressed:
+- L1: qr.py changed kind= to format= (TKT-026@0.1.0)
+- L2: Entry docker-compose comment fixed PROXYv2 → PROXYv1 (TKT-026@0.1.0)
+- L3: JWT in localStorage — accepted risk per ADR-002@0.1.0, no code change
+- L4: tests/test_deploy_scripts.py added with shellcheck + sanitize_input tests (TKT-026@0.1.0)
+- L5: Code comment added to api/routes/links.py explaining admin link divergence (TKT-026@0.1.0)
+- L6: Entry docker-compose ulimits added (TKT-026@0.1.0)
+- L7: README landing deploy section added (TKT-026@0.1.0)
+- L8: .env.example staleness — deferred (not in scope for TKT-026@0.1.0)

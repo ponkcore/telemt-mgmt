@@ -48,21 +48,21 @@
 #   publicly. If remote access is needed (e.g. Prometheus on another server),
 #   restrict via UFW: ufw allow from <monitoring-ip> to any port 9093 proto tcp
 #
-# B5: self-steal domain is REQUIRED for tls_emulation (Blocker for tls_emulation)
-#   telemt's rustls TLS client gets RST (connection reset) from ALL CDN-protected
+# B5: self-steal domain is REQUIRED for production tls_emulation
+#   telemt's rustls TLS client gets RST (connection reset) from CDN-protected
 #   third-party domains (Akamai, Google, Apple, GitHub, Microsoft) when fetching
 #   the ServerHello for tls_emulation. curl (OpenSSL) works fine against the same
-#   domains, but telemt's rustls does not. As a result, tls_emulation ALWAYS
-#   falls back to a fake 2048-byte cert when using a third-party domain.
+#   domains, but telemt's rustls does not. As a result, tls_emulation may fall
+#   back to a fake 2048-byte cert when using a third-party domain.
 #
-#   Self-steal is NOT optional for production tls_emulation — it is REQUIRED.
-#   With a self-steal domain, telemt fetches the ServerHello from the local
-#   Angie TLS server (operator-controlled LE cert), which always succeeds
-#   because there is no CDN WAF in the path.
+#   Self-steal is required for PRODUCTION tls_emulation. With a self-steal
+#   domain, telemt fetches the ServerHello from the local Angie TLS server
+#   (operator-controlled LE cert), which always succeeds because there is no
+#   CDN WAF in the path.
 #
-#   If you need tls_emulation=true (recommended for strongest TSPU evasion),
-#   you MUST use a self-steal domain. Third-party domains will silently fail
-#   tls_emulation and fall back to a fake cert.
+#   Third-party domains work for testing/development — the proxy functions
+#   correctly, but tls_emulation silently falls back to a fake cert. For
+#   production with maximum TSPU evasion, use a self-steal domain.
 #
 # Prompts for:
 #   DOMAIN          — exit server domain (e.g. proxy.example.com)
@@ -151,10 +151,12 @@ load_env "$ENV_FILE"
 
 # DOMAIN — exit server domain
 DOMAIN="$(prompt_for "DOMAIN" "Enter exit server domain (e.g. proxy.example.com)")"
+DOMAIN="$(sanitize_input "$DOMAIN")"
 save_env_var "$ENV_FILE" "DOMAIN" "$DOMAIN"
 
 # AD_TAG — Telegram ad_tag from @MTProxybot
 AD_TAG="$(prompt_for "AD_TAG" "Enter ad_tag from @MTProxybot (32-char hex)")"
+AD_TAG="$(sanitize_input "$AD_TAG")"
 save_env_var "$ENV_FILE" "AD_TAG" "$AD_TAG"
 
 # TLS_DOMAIN — FakeTLS camouflage domain (AC1: default is www.microsoft.com)
@@ -165,6 +167,7 @@ save_env_var "$ENV_FILE" "AD_TAG" "$AD_TAG"
 TLS_DOMAIN="$(prompt_for "TLS_DOMAIN" \
     "Enter FakeTLS domain (default: www.microsoft.com, or your own domain for self-steal)" \
     "www.microsoft.com")"
+TLS_DOMAIN="$(sanitize_input "$TLS_DOMAIN")"
 save_env_var "$ENV_FILE" "TLS_DOMAIN" "$TLS_DOMAIN"
 
 # ── Self-steal domain detection (AC2) ───────────────────────────────────────
@@ -338,17 +341,20 @@ else
         fi
     fi
 fi
+TELEMT_SECRET="$(sanitize_input "$TELEMT_SECRET")"
 export TELEMT_SECRET
 save_env_var "$ENV_FILE" "TELEMT_SECRET" "$TELEMT_SECRET"
 
 # MANAGEMENT_IPS — IPs allowed to access :9091 API
 MANAGEMENT_IPS="$(prompt_for "MANAGEMENT_IPS" \
     "Enter management server IPs (comma-separated, e.g. 10.0.0.5,203.0.113.10)")"
+MANAGEMENT_IPS="$(sanitize_input "$MANAGEMENT_IPS")"
 save_env_var "$ENV_FILE" "MANAGEMENT_IPS" "$MANAGEMENT_IPS"
 
 # MONITORING_IPS — IPs allowed to access :9090 Prometheus metrics
 MONITORING_IPS="$(prompt_for "MONITORING_IPS" \
     "Enter monitoring server IPs (comma-separated, e.g. 10.0.0.8,198.51.100.20)")"
+MONITORING_IPS="$(sanitize_input "$MONITORING_IPS")"
 save_env_var "$ENV_FILE" "MONITORING_IPS" "$MONITORING_IPS"
 
 echo ""
@@ -405,6 +411,8 @@ else
     export EXIT_REALITY_PRIVATE_KEY
     export EXIT_REALITY_PUBLIC_KEY
 fi
+EXIT_REALITY_PRIVATE_KEY="$(sanitize_input "$EXIT_REALITY_PRIVATE_KEY")"
+EXIT_REALITY_PUBLIC_KEY="$(sanitize_input "$EXIT_REALITY_PUBLIC_KEY")"
 save_env_var "$ENV_FILE" "EXIT_REALITY_PRIVATE_KEY" "$EXIT_REALITY_PRIVATE_KEY"
 save_env_var "$ENV_FILE" "EXIT_REALITY_PUBLIC_KEY" "$EXIT_REALITY_PUBLIC_KEY"
 
@@ -439,6 +447,7 @@ else
     fi
     export EXIT_VLESS_UUID
 fi
+EXIT_VLESS_UUID="$(sanitize_input "$EXIT_VLESS_UUID")"
 save_env_var "$ENV_FILE" "EXIT_VLESS_UUID" "$EXIT_VLESS_UUID"
 
 # ── Exit Reality SNI and short IDs ──────────────────────────────────────────
@@ -455,6 +464,7 @@ else
         "Enter exit Reality SNI (default: ads.x5.ru)" \
         "ads.x5.ru")"
 fi
+EXIT_REALITY_SNI="$(sanitize_input "$EXIT_REALITY_SNI")"
 save_env_var "$ENV_FILE" "EXIT_REALITY_SNI" "$EXIT_REALITY_SNI"
 
 # EXIT_REALITY_SHORT_IDS — auto-generate if not provided.
@@ -482,6 +492,7 @@ else
     fi
     export EXIT_REALITY_SHORT_IDS
 fi
+EXIT_REALITY_SHORT_IDS="$(sanitize_input "$EXIT_REALITY_SHORT_IDS")"
 save_env_var "$ENV_FILE" "EXIT_REALITY_SHORT_IDS" "$EXIT_REALITY_SHORT_IDS"
 
 echo ""
@@ -577,44 +588,48 @@ echo "→ Configuring firewall rules (UFW)..."
 
 if command -v ufw &>/dev/null; then
     # Allow SSH (don't lock ourselves out).
-    sudo ufw allow ssh 2>/dev/null || true
+    if ! sudo ufw allow ssh 2>/dev/null; then echo "WARNING: UFW rule failed: allow ssh" >&2; fi
 
     # Allow :443/tcp for Xray-exit VLESS-Reality inbound (from entry server).
     # In self-steal mode, :443 is also used by Angie for TLS cert serving.
-    sudo ufw allow 443/tcp 2>/dev/null || true
+    if ! sudo ufw allow 443/tcp 2>/dev/null; then echo "WARNING: UFW rule failed: allow 443/tcp" >&2; fi
 
     # Allow :8080/tcp for Angie mask host.
-    sudo ufw allow 8080/tcp 2>/dev/null || true
+    if ! sudo ufw allow 8080/tcp 2>/dev/null; then echo "WARNING: UFW rule failed: allow 8080/tcp" >&2; fi
 
     # Allow :80/tcp for certbot HTTP-01 challenge (self-steal mode only).
     if [[ -n "${SELF_STEAL_DOMAIN:-}" ]]; then
-        sudo ufw allow 80/tcp 2>/dev/null || true
+        if ! sudo ufw allow 80/tcp 2>/dev/null; then echo "WARNING: UFW rule failed: allow 80/tcp" >&2; fi
     fi
 
     # Restrict :9090 (Prometheus metrics) to monitoring IPs only.
     if [[ -n "$MONITORING_IPS" ]]; then
         # Remove existing :9090 rules, then re-add for monitoring IPs.
-        sudo ufw delete allow 9090/tcp 2>/dev/null || true
+        if ! sudo ufw delete allow 9090/tcp 2>/dev/null; then echo "WARNING: UFW rule failed: delete allow 9090/tcp" >&2; fi
         IFS=',' read -ra _mon_ips <<< "$MONITORING_IPS"
         for _ip in "${_mon_ips[@]}"; do
             _ip="${_ip//[[:space:]]/}"
-            [[ -n "$_ip" ]] && sudo ufw allow from "$_ip" to any port 9090 proto tcp 2>/dev/null || true
+            if [[ -n "$_ip" ]]; then
+                if ! sudo ufw allow from "$_ip" to any port 9090 proto tcp 2>/dev/null; then echo "WARNING: UFW rule failed (port 9090 for $_ip)" >&2; fi
+            fi
         done
     fi
 
     # Restrict :9091 (telemt API) to management IPs only.
     if [[ -n "$MANAGEMENT_IPS" ]]; then
-        sudo ufw delete allow 9091/tcp 2>/dev/null || true
+        if ! sudo ufw delete allow 9091/tcp 2>/dev/null; then echo "WARNING: UFW rule failed: delete allow 9091/tcp" >&2; fi
         IFS=',' read -ra _mgmt_ips <<< "$MANAGEMENT_IPS"
         for _ip in "${_mgmt_ips[@]}"; do
             _ip="${_ip//[[:space:]]/}"
-            [[ -n "$_ip" ]] && sudo ufw allow from "$_ip" to any port 9091 proto tcp 2>/dev/null || true
+            if [[ -n "$_ip" ]]; then
+                if ! sudo ufw allow from "$_ip" to any port 9091 proto tcp 2>/dev/null; then echo "WARNING: UFW rule failed (port 9091 for $_ip)" >&2; fi
+            fi
         done
     fi
 
     # Allow localhost for metrics and API.
-    sudo ufw allow from 127.0.0.1 to any port 9090 proto tcp 2>/dev/null || true
-    sudo ufw allow from 127.0.0.1 to any port 9091 proto tcp 2>/dev/null || true
+    if ! sudo ufw allow from 127.0.0.1 to any port 9090 proto tcp 2>/dev/null; then echo "WARNING: UFW rule failed: allow from 127.0.0.1 to any port 9090 proto tcp" >&2; fi
+    if ! sudo ufw allow from 127.0.0.1 to any port 9091 proto tcp 2>/dev/null; then echo "WARNING: UFW rule failed: allow from 127.0.0.1 to any port 9091 proto tcp" >&2; fi
 
     echo "✓ Firewall rules configured"
 else
@@ -626,6 +641,18 @@ fi
 echo "→ Starting containers via Docker Compose..."
 cd "$SCRIPT_DIR"
 
+# Rollback trap: if docker compose up fails, bring containers down to avoid
+# leaving a partially-started state (BACKLOG-006). The trap fires on ERR.
+_deploy_rollback() {
+    echo "⚠  Docker Compose failed — rolling back (docker compose down)..." >&2
+    if docker compose version &>/dev/null 2>&1; then
+        docker compose down 2>/dev/null || true
+    else
+        docker-compose down 2>/dev/null || true
+    fi
+}
+trap _deploy_rollback ERR
+
 if docker compose version &>/dev/null 2>&1; then
     docker compose down 2>/dev/null || true
     docker compose up -d
@@ -633,6 +660,9 @@ else
     docker-compose down 2>/dev/null || true
     docker-compose up -d
 fi
+
+# Remove the rollback trap after successful deploy (don't trap on normal exit).
+trap - ERR
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"

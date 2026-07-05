@@ -108,3 +108,27 @@ generate_secret() {
     local length="${1:-32}"
     head -c "$length" /dev/urandom | xxd -p | tr -d '\n'
 }
+
+# sanitize_input — strips dangerous characters from user-provided input to
+# prevent injection into sed substitutions and config file generation.
+#
+# Removes: single quotes ('), double quotes ("), backticks (`), semicolons (;),
+# pipe (|), ampersand (&), backslash (\), dollar sign ($).
+# These characters can break sed with | delimiter (pipe, ampersand, backslash),
+# execute subshells (backticks, dollar), or chain commands (semicolons) if the
+# value reaches a shell expansion.
+#
+# Does NOT strip: hyphens, dots, colons, slashes, underscores, alphanumeric —
+# these are legitimate in domain names (example.com), IPs (10.0.0.5), CIDR
+# notation (10.0.0.5/32), base64 keys (a-b_C), and hex values (deadbeef).
+#
+# Usage: sanitized_value="$(sanitize_input "$raw_value")"
+#
+# Per BACKLOG-004 / BACKLOG-007 (TKT-026).
+sanitize_input() {
+    local input="$1"
+    # Strip: ' " ` ; | & \ $
+    # The char set is built with $'...' to avoid quoting issues.
+    local chars=$'\'";`|&$\\\\'
+    printf '%s' "$input" | tr -d "$chars"
+}
