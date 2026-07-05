@@ -47,6 +47,11 @@ set -euo pipefail
 # Add venv to PATH so python, uvicorn, alembic are available.
 export PATH="/app/.venv/bin:$PATH"
 
+# TKT-025 B3: uv sync --no-install-project does not install the project
+# itself, so telemt_proxy (COPY'd to /app/) is not on sys.path. Setting
+# PYTHONPATH=/app makes "import telemt_proxy" resolve to /app/telemt_proxy.
+export PYTHONPATH="/app${PYTHONPATH:+:$PYTHONPATH}"
+
 # ── Wait for PostgreSQL to be ready (AC4 prerequisite) ───────────────────────
 echo "→ Waiting for database..."
 MAX_RETRIES=30

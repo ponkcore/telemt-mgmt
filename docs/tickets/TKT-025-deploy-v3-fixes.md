@@ -1,7 +1,7 @@
 ---
 id: TKT-025
 type: ticket
-status: ready
+status: in_review
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: M
@@ -62,3 +62,5 @@ Fix 6 bugs found during 3rd test deployment (TELEMT_DEPLOY_EXPERIENCE_2026-07-04
 
 ## §10 Execution Log
 - 2026-07-05 Mentor: ticket created from 3rd deploy report.
+- 2026-07-05 opencode-executor: started; branch tkt/TKT-025-deploy-v3-fixes
+- 2026-07-05 opencode-executor: in_review; tests 217 pass (1 skip); lint clean; typecheck clean; shellcheck clean; validate_docs OK
