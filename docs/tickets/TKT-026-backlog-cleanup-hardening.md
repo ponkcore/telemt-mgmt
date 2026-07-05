@@ -1,7 +1,7 @@
 ---
 id: TKT-026
 type: ticket
-status: in_review
+status: done
 arch_ref: ARCH-001@0.2.1
 depends_on: []
 estimate: M
@@ -103,3 +103,4 @@ Close all 7 open backlog items in one pass: deploy script input validation, UFW 
 - 2026-07-05 opencode-executor: started
 - 2026-07-05 opencode-executor: in_review; tests 253 pass (1 skip); lint clean; typecheck clean; shellcheck clean
 - 2026-07-05 opencode-executor: PR #52 opened, branch tkt/TKT-026-backlog-cleanup-hardening
+- 2026-07-05 opencode-orchestrator: merged in 120b2a0; RV-CODE-026 verdict=pass_with_changes (F-M1+F-L2 fixed, F-L3 backlogged — deploy-entry.sh UFW out of scope)
